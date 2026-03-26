@@ -1054,9 +1054,9 @@ git push
 
 11. Switch back to your Space on Hugging Face and click on the *App* link at the top. You should see that your app is in the process of building. After a few minutes, the app will be live and you can interact with it just like you did locally — but now it's running on the HuggingFace Spaces platform, and using a larger AI model served through that platform. You should see faster response times as well.
 
-![App building](./images/v2app38.png?raw=true "App building")
+![app building](./images/v3appb27.png?raw=true "app building")
 
-![App running](./images/v2app39.png?raw=true "App running")
+![running app on hf](./images/v3appb26.png?raw=true "running app on hf")
 
 <br><br>
 
