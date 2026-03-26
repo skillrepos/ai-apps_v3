@@ -215,8 +215,7 @@ code -d labs/common/lab2_agent_solution.txt agent.py
 ```
 python agent.py
 ```
-
-![Running the agent](./images/v2app2.png?raw=true "Running the agent")
+![Running the agent](./images/v3appb2.png?raw=true "Running the agent")
 
 <br><br>
 
@@ -279,7 +278,7 @@ As you look at the differences, note that we are using FastMCP to more easily se
 python mcp_server.py
 ```
 
-![MCP server start](./images/v2app5.png?raw=true "MCP server start") 
+![Starting the MCP server](./images/v3appb3.png?raw=true "Starting the MCP server")
 
 <br><br>
 
@@ -297,7 +296,7 @@ code tools/discover_tools.py
 python tools/discover_tools.py
 ```
 
-![Discovering tools](./images/v2app6.png?raw=true "Discovering tools") 
+![Discovering tools](./images/v3appb4.png?raw=true "Discovering tools")
 
 <br><br>
 
@@ -323,7 +322,7 @@ python mcp_agent.py
 
 <br><br>
 
-8. The agent should start up, and wait for you to prompt it about weather in a location. You'll be able to see similar TAO output. And you'll also be able to see the server INFO messages in the other terminal as the MCP connections and events happen. A suggested prompt is below. (**Note that there may be a long period of processing before you get the final answer. This could be on the order of minutes.**)
+8. The agent should start up, and wait for you to prompt it about weather in a location. You'll be able to see similar TAO output. And you'll also be able to see the server INFO messages in the other terminal as the MCP connections and events happen. A suggested prompt is below. (**Note that there may be a long period of processing before you get the final answer.)
 
 ```
 What is the weather in New York?
@@ -336,7 +335,7 @@ What is the weather in New York?
 
 9. Because we're using a tool to do the geolocation (get latitude and longitude), you can also put in locations like Sydney, Australia and get accurate results.
 
-![Agent using MCP client running](./images/v2app7.png?raw=true "Agent using MCP client running") 
+![Agent using MCP client running](./images/v3appb5.png?raw=true "Agent using MCP client running")
 
 <br><br>
 
