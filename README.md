@@ -31,7 +31,7 @@ The codespace is ready to use when you see a prompt like the one shown below in 
 
 The RAG agent uses HuggingFace's Inference API to generate LLM responses. You'll need a free API token:
 
-A. Go to (https://huggingface.co)[https://huggingface.co] and log in if you already have an account. If you need to create an account, click the *Sign Up* button or visit (https://huggingface.co/join)[https://huggingface.co/join]
+A. Go to [https://huggingface.co](https://huggingface.co) and log in if you already have an account. If you need to create an account, click the *Sign Up* button or visit [https://huggingface.co/join](https://huggingface.co/join)
 
 ![HF login](./images/aia-3-19.png?raw=true "HF login")
 
