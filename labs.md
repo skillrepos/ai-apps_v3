@@ -504,6 +504,8 @@ code -d labs/common/lab5_server_solution.txt mcp_server.py
 python mcp_server.py
 ```
 
+![Running server](./images/v3appb10.png?raw=true "Running server")
+
 <br><br>
 
 4. We have a starter file for the new agent in [**rag_agent.py**](./rag_agent.py). In a split/separate terminal, open the diff view to merge in the agent code. Note how this agent call all four tools through MCP. The agent is a pure orchestrator.
@@ -540,7 +542,7 @@ Tell me about HQ
 Tell me about the Southern office
 ```
 
-![Agent query about HQ](./images/v2app43.png?raw=true "Agent query about HQ")
+![Agent query about HQ](./images/v3appb11.png?raw=true "Agent query about HQ")
 
 (Troubleshooting: If you see an error about connection refused, the local Ollama server might have been stopped at some point.  Run the command `ollama serve &` again.)
 
@@ -548,7 +550,7 @@ Tell me about the Southern office
 
 8. What you should see is the agent’s TAO loop in action — just like the earlier agent runs. The LLM will think about what to do, call `search_offices` to find relevant office data from the vector database, then geocode the city, get the weather, and convert the temperature. Each step shows the Thought, Action, and Observation. At the end, it displays the weather information for the city the office is located in. After the initial run, you can try prompts about other offices or cities mentioned in the PDF. Type *exit* when done.
 
-![Running the RAG agent](./images/v2app47.png?raw=true "Running the RAG agent")
+![Running the RAG agent](./images/v3appb12.png?raw=true "Running the RAG agent")
 
 <br><br>
 
@@ -577,7 +579,7 @@ Tell me about HQ
 Tell me about the Southern office
 ```
 
-![Running the updated RAG agent](./images/v2app45.png?raw=true "Running the updated RAG agent")
+![Running the updated RAG agent](./images/v3appb13.png?raw=true "Running the updated RAG agent")
 
 <br><br>
 
