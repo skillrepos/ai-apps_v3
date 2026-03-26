@@ -1,7 +1,7 @@
 # AI for App Development - Deep Dive
 ## Building and deploying AI Apps that leverage agents, MCP and RAG
 ## Session labs 
-## Revision 2.8 - 03/24/26
+## Revision 3.0 - 03/26/26
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
@@ -68,7 +68,7 @@ ollama list
 ollama pull llama3.2
 ```
 
-![pulling the model](./images/v2app1.png?raw=true "pulling the model")
+![pulling the model](./images/v3app1.png?raw=true "pulling the model")
 
 <br><br>
 
@@ -105,7 +105,7 @@ curl http://localhost:11434/api/generate -d '{
 
 8. This will take a minute or so to run. You should see a long text response . You can try out some other prompts/queries if you want.
 
-![query response](./images/v2app4.png?raw=true "Query response")
+![curl query response](./images/v3app2.png?raw=true "curl query response")
 
 <br><br>
 
@@ -137,7 +137,7 @@ python simple_ollama.py
 
 11. When prompted, enter a question like "What is the capital of France?" and press Enter. You should see the model's response printed to the terminal. This demonstrates how easy it is to integrate Ollama into a Python application. Feel free to try other prompts. 
 
-![query](./images/v2app3.png?raw=true "query")
+![app query](./images/v3app3.png?raw=true "app query")
 
 
 <br><br>
@@ -147,6 +147,7 @@ python simple_ollama.py
 ```
 python warmup_models.py
 ```
+![warmup](./images/v3appb1.png?raw=true "warmup")
 
 <p align="center">
 **[END OF LAB]**
