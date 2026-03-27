@@ -409,17 +409,58 @@ fi
 
 Any `pip install`, `pip install --upgrade`, or NVIDIA/CUDA cleanup commands must be inside the `else` block. If they run unconditionally after the copy, they will download new versions over the network on every codespace creation.
 
-## Fallback: building without a pre-built image
+## Forked repos and prebuilds
 
-If the GHCR image is unavailable, change \`devcontainer.json\` to build locally:
+Forked repos **cannot pull GHCR images** from the original org's private packages. Even if the image is public, forks should use the Dockerfile build approach for reliability.
 
-\`\`\`jsonc
-// Pre-built image (default — fast startup):
+### devcontainer.json for forks
+
+Forks must use `"build"` instead of `"image"`, and **must include `"context": ".."`** because Codespaces uses `.devcontainer/` as the default build context, but the Dockerfile needs to `COPY` files (e.g. `requirements.txt`) from the repo root:
+
+```jsonc
+// For the original repo (pulls pre-built image — fast):
 "image": "ghcr.io/ORG/IMAGE:latest",
 
-// Local build fallback (slower, but no GHCR dependency):
-"build": { "dockerfile": "Dockerfile" },
-\`\`\`
+// For forks or when GHCR image is unavailable (builds from Dockerfile):
+"build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+},
+```
+
+Without `"context": ".."`, the build will fail with:
+```
+"/requirements.txt": not found
+```
+
+### Setting up prebuilds on a fork
+
+1. In the forked repo, change `devcontainer.json` to use the `"build"` config shown above
+2. Go to the fork's **Settings > Codespaces > Prebuilds > Set up prebuild**
+3. Configure for the `main` branch and your preferred region
+4. The prebuild will build the Dockerfile on GitHub's infra and cache the result
+5. Subsequent codespace creations from the fork will use the cached prebuild
+
+This is slower than pulling a pre-built image (~5-10 min for the initial prebuild) but only happens once. After the prebuild completes, users get fast startup.
+
+### Keeping forks in sync
+
+When the upstream repo updates dependency files or the Dockerfile:
+
+1. Sync the fork with upstream
+2. The prebuild will automatically re-trigger (if configured for "on push")
+3. No need to rebuild or push any GHCR image — the fork builds its own
+
+## Fallback: building without a pre-built image
+
+If the GHCR image is unavailable, change `devcontainer.json` to build locally using the same fork-compatible config:
+
+```jsonc
+"build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+},
+```
 
 With local build, Codespaces builds the Dockerfile during creation on GitHub's infrastructure (not on user WiFi). This is slower (~5-10 min) but works without any GHCR setup.
 
@@ -456,6 +497,10 @@ if "build" in data:
     del data["build"]
 data["image"] = "$FULL_IMAGE"
 
+# Also store the fork-compatible build config as a comment hint
+# (users switch to this when forking — see IMAGE-MAINTENANCE.md)
+data["_comment_fork_build"] = "For forks, replace 'image' with: \"build\": {\"dockerfile\": \"Dockerfile\", \"context\": \"..\"}"
+
 # Remove features that are now in the Dockerfile
 features_to_remove = []
 for key in data.get("features", {}):
@@ -479,6 +524,7 @@ with open("$DEVCONTAINER_JSON", "w") as f:
 if features_to_remove:
     print("  Removed features (now in Dockerfile): " + ", ".join(features_to_remove))
 print("  Set image to: $FULL_IMAGE")
+print("  Added fork build hint (see _comment_fork_build in devcontainer.json)")
 PYEOF
 
 # ── Summary ───────────────────────────────────────────────────────────
@@ -511,4 +557,19 @@ echo "  5. Commit and push all changes"
 echo ""
 echo "  6. (Optional) Enable Codespaces prebuilds:"
 echo "     Repo Settings > Codespaces > Prebuilds > Set up prebuild"
+echo ""
+echo "  For FORKED repos:"
+echo "  ────────────────────────────────────────────────"
+echo "  Forks cannot pull the GHCR image. In the fork's"
+echo "  devcontainer.json, replace the \"image\" line with:"
+echo ""
+echo '     "build": {'
+echo '         "dockerfile": "Dockerfile",'
+echo '         "context": ".."'
+echo '     },'
+echo ""
+echo "  The \"context\": \"..\" is required because Codespaces"
+echo "  uses .devcontainer/ as the build context by default,"
+echo "  but the Dockerfile COPYs files from the repo root."
+echo "  See IMAGE-MAINTENANCE.md for full details."
 echo "============================================================"
