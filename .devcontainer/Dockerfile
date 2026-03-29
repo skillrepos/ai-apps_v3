@@ -30,4 +30,9 @@ RUN /opt/py_env/bin/python -c \
     "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 # Pre-install Ollama (binary only — no model pull)
-RUN curl -fsSL https://ollama.com/install.sh | sh
+# Remove CUDA/Vulkan GPU libraries (~4.6 GB) since Codespaces is CPU-only
+RUN curl -fsSL https://ollama.com/install.sh | sh && \
+    rm -rf /usr/local/lib/ollama/cuda_v12 \
+           /usr/local/lib/ollama/cuda_v13 \
+           /usr/local/lib/ollama/mlx_cuda_v13 \
+           /usr/local/lib/ollama/vulkan
