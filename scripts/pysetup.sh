@@ -5,12 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [ -d "/opt/py_env" ]; then
-    # Copy pre-built venv from Docker image and fix paths
-    cp -a /opt/py_env ./$PYTHON_ENV
-    # Update venv paths to point to the workspace location
-    sed -i "s|/opt/py_env|$(pwd)/$PYTHON_ENV|g" ./$PYTHON_ENV/bin/activate
-    sed -i "s|/opt/py_env|$(pwd)/$PYTHON_ENV|g" ./$PYTHON_ENV/bin/pip*
-    sed -i "s|/opt/py_env|$(pwd)/$PYTHON_ENV|g" ./$PYTHON_ENV/pyvenv.cfg 2>/dev/null || true
+    # Symlink to pre-built venv from Docker image (avoids ~1.6 GB copy)
+    ln -sfn /opt/py_env ./$PYTHON_ENV
 else
     # Fallback: create venv and install from scratch
     python3 -m venv ./$PYTHON_ENV
