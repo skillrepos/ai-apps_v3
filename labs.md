@@ -635,6 +635,11 @@ You should see “LLM Provider: Ollama (local)” — this confirms that `get_ll
 <br><br>
 
 3. Now open [**guardrails.py**](./guardrails.py) — this is a prompt-injection defence module that illustrates the “defence in depth” principle. Walk through its sections:
+
+```
+code guardrails.py
+```
+
    - **Section 1 – INJECTION_PATTERNS**: compiled regexes matching common injection phrases like “ignore previous instructions”, “you are now a”, “system:”, etc.
    - **Section 2 – scan_text()**: loops over the patterns and returns any matches
    - **Section 3 – check_input()**: scans user prompts *before* the LLM sees them. If injection is detected, returns a safe refusal.
