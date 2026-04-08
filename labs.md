@@ -1,7 +1,6 @@
-# AI for App Development - Deep Dive
-## Building and deploying AI Apps that leverage agents, MCP and RAG
+# Developing AI Applications with Agents, RAG, & MCP using Python
 ## Session labs 
-## Revision 3.0 - 03/26/26
+## Revision 3.1 - 04/08/26
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
