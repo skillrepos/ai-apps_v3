@@ -21,7 +21,7 @@
 
 **What the Ollama example does**
 - Starts a local Ollama server inside the Codespace so you can run models locally.
-- Pulls a small model (`llama3.2:1b`) and creates an alias (`llama3.2:latest`) used by the rest of the workshop.
+- Pulls a small model (`llama3.2:3b`) with an alias (`llama3.2:latest`) used by several other labs.
 - Runs the model interactively (`ollama run`) and via HTTP (`/api/generate`) to show the two common access patterns.
 - Runs a simple Python script (`simple_ollama.py`) that calls Ollama programmatically using LangChain’s Ollama integration.
 
