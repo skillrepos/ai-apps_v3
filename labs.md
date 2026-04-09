@@ -805,7 +805,7 @@ Tell me about HQ
 
 <br><br>
 
-7. You should see the agent process your query and return a natural language summary with office details and live weather. Try the example buttons at the bottom of the chat area for quick queries. (**NOTE**: Because of all the processing that happens in the background, you will probably have to wait up to 90 seconds on the initial query while the process starts the server, etc. During this time, you can switch back to the terminal and see the processing.)
+7. You should see the agent process your query and return a natural language summary with office details and live weather. Try the example buttons at the bottom of the chat area for quick queries. (**NOTE**: Because of all the processing that happens in the background, you will probably have to wait a bit on the initial query while the process starts the server, etc. During this time, you can switch back to the terminal and see the processing.)
 
 ![Gradio interface](./images/v2app29.png?raw=true "Gradio interface")
 
@@ -1019,7 +1019,7 @@ The agent should call `search_offices` twice (once for each office) and compose 
 
 <br><br>
 
-7. Now, switch back to your codespace. In the root of the project `/workspaces/ai-apps_v2` in a terminal, run the following commands to clone the new space. **Replace *HF_USERID* with your actual Hugging Face userid. (If you named your space something other than "ai-office-assistant", also replace that in the commands below.)**
+7. Now, switch back to your codespace. In the root of the project `/workspaces/ai-apps_v3` in a terminal, run the following commands to clone the new space. **Replace *HF_USERID* with your actual Hugging Face userid. (If you named your space something other than "ai-office-assistant", also replace that in the commands below.)**
 
 ```
 git clone https://huggingface.co/spaces/HF_USERID/ai-office-assistant
