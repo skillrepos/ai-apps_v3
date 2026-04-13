@@ -75,7 +75,7 @@ source ~/.bashrc
 **5. Open up the *labs.md* file so you can follow along with the labs.**
 You can either open it in a separate browser instance or open it in the codespace. 
 
-![Opening labs](./images/v2app40.png?raw=true "Opening labs")
+![Opening labs](./images/v3appb29.png?raw=true "Opening labs")
 
 **Now, you are ready for the labs!**
 
