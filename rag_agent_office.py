@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
 """
-Lab 8: Conversational RAG Agent with Memory
+Lab 6: RAG-Enhanced Office Agent (Deployable)
 ═══════════════════════════════════════════════════════════════════════
-Evolves the Lab 6 deployable agent into a truly conversational system:
-- Maintains CONVERSATION MEMORY across queries (last 5 exchanges)
-- Enhanced system prompt handles diverse query types (not just weather)
-- Smarter tool routing: the LLM decides WHICH tools to use based on
-  the question — office info, service queries, comparisons, follow-ups
-- Follow-up questions ("What services do they offer?") use memory to
-  resolve pronouns and maintain context
+Evolves the RAG agent from Lab 5 to be deployment-ready:
+- Uses llm_provider for flexible LLM backend (Ollama OR HF Inference)
+- Starts the MCP server as a SUBPROCESS via stdio transport
+- Adds guardrails for prompt-injection defence at three boundaries
+- Ready for Gradio interface (Lab 7) and HF deployment (Lab 8)
 
 Tools Available (all via MCP server)
 ------------------------------------
-1. search_offices(query)              → text chunks from office vector DB
-2. find_offices_by_service(service)   → offices offering a specific service
-3. list_all_offices()                 → all office entries for overview
-4. geocode_location(name)             → lat/lon coordinates
-5. get_weather(lat, lon)              → current weather in Celsius
-6. convert_c_to_f(c)                  → temperature in Fahrenheit
+1. search_offices(query) → text chunks from office vector DB
+2. geocode_location(name) → lat/lon coordinates
+3. get_weather(lat, lon)  → current weather in Celsius
+4. convert_c_to_f(c)      → temperature in Fahrenheit
 
-Key Changes from Lab 6
+Key Changes from Lab 5
 ------------------------------------------
-- Adds conversation memory (list of Q&A pairs passed to the LLM)
-- Enhanced system prompt teaches the agent to handle 5 query types
-- run_agent() now accepts and returns memory for Gradio state
-- Agent decides whether to fetch weather based on question type
-- Supports follow-up questions via memory context
+- Lab 5 connected to the MCP server over HTTP → requires running it
+  separately with "python mcp_server.py"
+- This version starts the MCP server as a SUBPROCESS and connects
+  via stdio transport → fully self-contained, one command to run
+- Lab 5 used ChatOllama directly → this uses llm_provider (Ollama or HF)
+- Adds guardrails at three boundaries: input, tool results, output
+- Adds a synchronous wrapper so Gradio can call it easily
 """
 
 # ────────────────────────── standard libs ───────────────────────────
@@ -45,16 +43,16 @@ from guardrails import check_input, check_tool_result, check_output
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 1.  Configuration                                               ║
 # ╚══════════════════════════════════════════════════════════════════╝
+MCP_ENDPOINT     = "http://127.0.0.1:8000/mcp/" # MCP server from Lab 5
 
-# Regex for parsing LLM responses (same pattern as earlier labs)
+# Regex for parsing LLM responses (same pattern as Labs 2 and 3)
 ACTION_RE = re.compile(r"Action:\s*(\w+)", re.IGNORECASE)
 ARGS_RE   = re.compile(r"Args:\s*(\{.*?\})(?:\s|$)", re.S | re.IGNORECASE)
 
-# MCP server subprocess — starts mcp_server.py via stdio
+# MCP server subprocess — starts mcp_server.py via stdio instead of
+# connecting over HTTP. FastMCP's Client sees a .py path and auto-
+# starts it as a child process, talking MCP over stdin/stdout.
 MCP_SERVER = str(Path(__file__).parent / "mcp_stdio_wrapper.py")
-
-# Maximum conversation exchanges to keep in memory
-MAX_MEMORY = 5
 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 2.  MCP result unwrapper                                        ║
@@ -83,46 +81,30 @@ def unwrap(obj):
     return obj
 
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ 3.  System prompt — enhanced for diverse queries + memory        ║
+# ║ 3.  System prompt — tells the LLM about all available tools     ║
 # ╚══════════════════════════════════════════════════════════════════╝
 SYSTEM = textwrap.dedent("""
-You are an intelligent office information assistant with memory of our
-conversation. You answer questions about company offices using database
-search, live weather data, and analytical reasoning.
+You are an office information agent. You answer questions about company
+offices by searching a database and looking up live weather data.
 
 You have these tools:
 
 search_offices(query: str)
-    Searches the office database for matching information.
-    Returns: text chunks — each chunk is one row from the office table
-    with fields in this order, separated by spaces:
-      Office Name | Address | Number of Employees | Revenue (USD) | Services Offered
-    Example chunk: "HQ 123 Main St, New York, NY 200 15M Corporate Operations, Finance"
-    means: name=HQ, address=123 Main St New York NY, 200 employees,
-    $15M revenue, services=Corporate Operations and Finance.
-    Use for questions about a specific office.
-
-find_offices_by_service(service: str)
-    Finds offices that offer a specific service type.
-    Returns: text chunks (same format as search_offices).
-    Use when asked "which offices do X?" or "where is Y offered?"
-
-list_all_offices()
-    Lists all offices with details. No arguments needed.
-    Returns: text chunks (same format as search_offices).
-    Use for overview, counting, or broad comparison questions.
+    Searches the company office database for matching information.
+    Returns: text chunks with office names, cities, and details.
+    ALWAYS call this first to find relevant office information.
 
 geocode_location(name: str)
-    Converts a city name to coordinates.
+    Converts a city/location name to coordinates.
     Returns: {"latitude": float, "longitude": float, "name": str}
 
 get_weather(lat: float, lon: float)
     Gets current weather for given coordinates.
     Returns: {"temperature": float, "code": int, "conditions": str}
-    Temperature is in Celsius.
+    Note: temperature is in Celsius.
 
 convert_c_to_f(c: float)
-    Converts Celsius to Fahrenheit.
+    Converts a Celsius temperature to Fahrenheit.
     Returns: float
 
 IMPORTANT: Respond with EXACTLY ONE step at a time — a single
@@ -132,94 +114,73 @@ Thought: <your reasoning about what to do next>
 Action: <exact tool name only>
 Args: <valid JSON arguments for the tool>
 
-QUERY TYPES — choose tools based on the question:
+Examples:
 
-1. OFFICE + WEATHER ("Tell me about HQ"):
-   search_offices → geocode_location → get_weather → convert_c_to_f → DONE
-   Final answer format: state the office city, the current weather
-   (conditions and temperature in °F), and one interesting fact about
-   that city from your own knowledge.
+Thought: I need to search for office information about HQ
+Action: search_offices
+Args: {"query": "HQ"}
 
-2. SERVICE QUERY ("Which offices do Tech Development?"):
-   find_offices_by_service → DONE  (no weather needed)
+Thought: I found the office is in Austin, TX. I need coordinates.
+Action: geocode_location
+Args: {"name": "Austin"}
 
-3. COMPARISON ("Compare Tokyo and London offices"):
-   search_offices for first → search_offices for second → DONE
+Thought: Now I'll get the weather at those coordinates
+Action: get_weather
+Args: {"lat": 30.2672, "lon": -97.7431}
 
-4. FOLLOW-UP ("What services do they offer?"):
-   Use conversation history to figure out what "they" refers to,
-   then search_offices with that office name → DONE
+Thought: I need to convert 25.0 Celsius to Fahrenheit
+Action: convert_c_to_f
+Args: {"c": 25.0}
 
-5. OVERVIEW ("How many offices are there?" or "List all offices"):
-   list_all_offices → DONE
-
-When you have gathered all information, respond with:
+When you have gathered all the information, respond with:
 Thought: I have all the information needed
 Action: DONE
 Args: {}
-Final: <a helpful summary answering the user's question>
+Final: <a friendly 2-3 sentence summary including the office name and
+city, weather conditions and temperature in Fahrenheit, and one
+interesting fact about the city>
 
-Do NOT put arguments on the Action line. Arguments go ONLY in Args as JSON.
+Do NOT put arguments on the Action line. Arguments go ONLY in the Args line as JSON.
 
 RULES:
-1. Use conversation history to understand follow-up questions and pronouns
-2. Choose the RIGHT tools for the query type — do NOT always get weather
-3. Only get weather when the question is specifically about an office
-   (type 1) or the user explicitly asks about weather
-4. For service or comparison queries, just summarize the office data
-5. The FIRST search result is the most relevant — use the city from it
-6. When geocoding, use ONLY the city name (e.g. "New York" not "New York, NY")
-7. Office details MUST come from tool results — do NOT invent them.
-   Remember the data format: Name, Address, Employees, Revenue, Services.
-   Do NOT confuse revenue with square footage or other metrics.
-8. You may add one interesting fact about the city from your own knowledge
+1. ALWAYS start with search_offices to find office data
+2. The FIRST search result is the most relevant — use the city from it
+3. When geocoding, use ONLY the city name (e.g. "New York" not "New York, NY")
+4. If geocoding fails, retry with a simpler name before trying other cities
+5. Get the weather, then convert the temperature
+6. Office details and weather MUST come from tool results — do NOT invent them
+7. You may add one interesting fact about the city from your own knowledge
+8. Do NOT add extra text beyond the required format
 9. Respond with ONLY ONE Thought/Action/Args per message — NEVER plan ahead
 """).strip()
 
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ 4.  Async TAO agent loop (with conversation memory)              ║
+# ║ 4.  Async TAO agent loop (starts MCP server via stdio)          ║
 # ╚══════════════════════════════════════════════════════════════════╝
-async def _run_agent_async(prompt: str, memory: list = None,
-                           max_steps: int = 12) -> tuple:
+async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:
     """
-    Run the TAO agent loop with conversation memory.
+    Run the TAO agent loop with the MCP server as a subprocess.
 
-    Memory is a list of (question, answer) tuples from previous
-    exchanges. The last MAX_MEMORY exchanges are included in the
-    system prompt so the LLM can understand follow-up questions.
-
-    Returns
-    -------
-    tuple of (response_text, updated_memory_list)
+    The MCP server is started via stdio transport — the agent spawns
+    mcp_stdio_wrapper.py as a child process and talks MCP protocol
+    over stdin/stdout. ALL tools go through MCP — the agent is a
+    pure orchestrator.
     """
-    memory = list(memory) if memory else []
-
     # ── Guardrail: check user input before the LLM sees it ───────
     is_safe, prompt = check_input(prompt)
     if not is_safe:
         print(f"\n⚠️  Prompt blocked by guardrails.")
-        return prompt, memory          # prompt holds the refusal message
+        return prompt          # prompt now holds the refusal message
 
     llm = get_llm()
 
-    # ── Build memory context for the system prompt ────────────────
-    memory_context = ""
-    if memory:
-        lines = ["\nCONVERSATION HISTORY (use to understand follow-ups):"]
-        for q, a in memory[-MAX_MEMORY:]:
-            lines.append(f"  User asked: {q}")
-            lines.append(f"  You answered: {a[:200]}")
-        memory_context = "\n".join(lines)
-
     messages = [
-        {"role": "system", "content": SYSTEM + memory_context},
+        {"role": "system", "content": SYSTEM},
         {"role": "user",   "content": prompt},
     ]
 
     print("\n" + "="*60)
     print("RAG Agent — Thought / Action / Observation")
-    if memory:
-        print(f"  (Memory: {len(memory)} previous exchange(s))")
     print("="*60 + "\n")
 
     # Start MCP server as subprocess and connect via stdio
@@ -260,10 +221,7 @@ async def _run_agent_async(prompt: str, memory: list = None,
                 # ── Guardrail: sanitise output before user sees it ─
                 final = check_output(final)
                 print(f"\n{final}\n")
-
-                # ── Update memory with this exchange ──────────────
-                memory.append((prompt, final))
-                return final, memory
+                return final
 
             # ── Parse the Args ────────────────────────────────────────
             args_match = ARGS_RE.search(response)
@@ -301,76 +259,42 @@ async def _run_agent_async(prompt: str, memory: list = None,
 
             # Feed the observation back to the LLM.
             # Truncate to the first Thought/Action/Args triplet only —
-            # some models plan multiple steps at once which confuses
-            # the loop if appended in full.
+            # some models (e.g. HF Inference) plan multiple steps at once
+            # which confuses the loop if appended in full.
             first_step = response[:args_match.end()]
             messages.append({"role": "assistant", "content": first_step})
             messages.append({"role": "user",
                              "content": f"Observation: {obs_text}"})
 
-    fallback = "Reached maximum steps without completing."
-    memory.append((prompt, fallback))
-    return fallback, memory
+    return "Reached maximum steps without completing."
 
 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 5.  Synchronous wrapper (for Gradio and command-line use)       ║
 # ╚══════════════════════════════════════════════════════════════════╝
-def run_agent(prompt: str, memory: list = None,
-              max_steps: int = 12) -> tuple:
+def run_agent(prompt: str, max_steps: int = 10) -> str:
     """
     Synchronous entry point that Gradio and the command line use.
-
-    Parameters
-    ----------
-    prompt : str
-        The user's question
-    memory : list, optional
-        List of (question, answer) tuples from previous exchanges
-    max_steps : int
-        Maximum TAO loop iterations
-
-    Returns
-    -------
-    tuple of (response_text, updated_memory_list)
+    Wraps the async agent loop with asyncio.run().
     """
-    return asyncio.run(_run_agent_async(prompt, memory, max_steps))
+    return asyncio.run(_run_agent_async(prompt, max_steps))
 
 
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ 6.  Interactive loop (with persistent memory)                    ║
+# ║ 6.  Interactive loop                                             ║
 # ╚══════════════════════════════════════════════════════════════════╝
 if __name__ == "__main__":
     print("=" * 60)
-    print("Office Agent (Conversational — with Memory)")
+    print("Office Agent (Deployable Version)")
     print("=" * 60)
     print("\nAsk about any office (e.g. 'Tell me about HQ')")
-    print("Then try follow-ups (e.g. 'What services do they offer?')")
-    print("Type 'memory' to see conversation history")
-    print("Type 'clear' to reset memory")
     print("Type 'exit' to quit\n")
-
-    memory = []
 
     while True:
         prompt = input("User: ").strip()
         if prompt.lower() == "exit":
             print("Goodbye!")
             break
-        if prompt.lower() == "memory":
-            if memory:
-                print(f"\n--- Conversation Memory ({len(memory)} exchanges) ---")
-                for i, (q, a) in enumerate(memory, 1):
-                    print(f"  {i}. Q: {q}")
-                    print(f"     A: {a[:100]}...")
-                print()
-            else:
-                print("\n(No conversation history yet)\n")
-            continue
-        if prompt.lower() == "clear":
-            memory = []
-            print("\nMemory cleared.\n")
-            continue
         if prompt:
-            asyncio.run(run(prompt))
+            run_agent(prompt)
             print()

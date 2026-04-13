@@ -22,7 +22,8 @@ import asyncio                    # built-in: run asynchronous code
 from fastmcp import Client        # official async JSON-RPC wrapper
 
 # ╔════════════════════════════════════════════════════════════════╗
-# 1.  Async entry-point                                           ║
+# 1.  Async entry-point                                         python tools/discover_tools.py
+#    ║
 # ╚════════════════════════════════════════════════════════════════╝
 async def main() -> None:
     """
