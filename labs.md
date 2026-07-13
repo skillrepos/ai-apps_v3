@@ -4,6 +4,19 @@
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
+## Lab Index
+- [Lab 1 - Using Ollama to run models locally](#lab-1)
+- [Lab 2 - Creating a simple agent](#lab-2)
+- [Lab 3 - Exploring MCP](#lab-3)
+- [Lab 4 - Working with Vector Databases](#lab-4)
+- [Lab 5 - Using RAG with Agents](#lab-5)
+- [Lab 6 - Preparing the App for Deployment](#lab-6)
+- [Lab 7 - Adding a Web Interface](#lab-7)
+- [Lab 8 - Making the Agent Truly Conversational](#lab-8)
+- [Lab 9 - Deploying to Hugging Face](#lab-9)
+
+---
+
 **NOTES**
 - To copy and paste in the codespace, you may need to use keyboard commands - CTRL-C and CTRL-V. Chrome may work best for this.
 - If your codespace has to be restarted, run these commands again!
@@ -13,6 +26,8 @@
   ```
 
 <br><br><br>
+<a id="lab-1"></a>
+
 **Lab 1 - Using Ollama to run models locally**
 
 **Purpose: In this lab, we’ll start getting familiar with Ollama, a way to run models locally.**
@@ -154,6 +169,8 @@ python warmup_models.py
 </br></br>
 
 
+<a id="lab-2"></a>
+
 **Lab 2 - Creating a simple agent**
 
 **Purpose: In this lab, we’ll learn the basics of agents and create a simple one. We’ll observe the agent loop (plan → tool call → result) via the program’s logged steps and tool inputs/outputs.**
@@ -238,6 +255,8 @@ Here's a clue: "If latitude/longitude is in the Southern or Western hemisphere, 
 </p>
 </br></br>
 
+
+<a id="lab-3"></a>
 
 **Lab 3 - Exploring MCP**
 
@@ -345,6 +364,8 @@ What is the weather in New York?
 </p>
 </br></br>
 
+<a id="lab-4"></a>
+
 **Lab 4 - Working with Vector Databases**
 
 **Purpose: In this lab, we’ll learn about how to use vector databases for storing supporting data and doing similarity searches.**
@@ -450,6 +471,8 @@ High revenue branch
 **[END OF LAB]**
 </p>
 </br></br>
+
+<a id="lab-5"></a>
 
 **Lab 5 - Using RAG with Agents**
 
@@ -588,6 +611,8 @@ Tell me about the Southern office
 **[END OF LAB]**
 </p>
 </br></br>
+
+<a id="lab-6"></a>
 
 **Lab 6 - Preparing the App for Deployment**
 
@@ -728,6 +753,8 @@ In production, this log would feed into a monitoring system (e.g. Datadog, Splun
 </br></br>
     
 
+<a id="lab-7"></a>
+
 **Lab 7 - Adding a Web Interface**
 
 **Purpose: In this lab, we'll add a professional web interface using Gradio on top of our deployable agent.**
@@ -823,6 +850,8 @@ Tell me about HQ
 **[END OF LAB]**
 </p>
 </br></br>
+
+<a id="lab-8"></a>
 
 **Lab 8 - Making the Agent Truly Conversational**
 
@@ -980,6 +1009,8 @@ The agent should call `search_offices` twice (once for each office) and compose 
 **[END OF LAB]**
 </p>
 </br></br>
+
+<a id="lab-9"></a>
 
 **Lab 9 - Deploying to Hugging Face**
 
