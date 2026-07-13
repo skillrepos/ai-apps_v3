@@ -1,0 +1,848 @@
+{
+  "files": {
+    "labs/common/lab2_agent_solution.txt": [
+      {
+        "anchor": "url = (",
+        "title": "get_weather: build request",
+        "note": "**Assembles the Open-Meteo forecast URL from the lat/lon arguments.**",
+        "endAnchor": ")"
+      },
+      {
+        "anchor": "r = requests.get(url, timeout=15)",
+        "title": "get_weather: fetch & parse",
+        "note": [
+          "**Calls Open-Meteo and returns high/low/conditions from the JSON.**",
+          "- WEATHER_CODES maps the numeric code to a friendly label"
+        ],
+        "endAnchor": "}"
+      },
+      {
+        "anchor": "TOOLS = {",
+        "title": "Tool registry",
+        "note": "**Maps tool names to functions so the agent can dispatch a call by name.**"
+      },
+      {
+        "anchor": "llm = ChatOllama(model=\"llama3.2\", temperature=0.0)",
+        "title": "Local LLM client",
+        "note": [
+          "**Connects to the local Ollama model that drives the agent.**",
+          "- temperature 0 keeps tool decisions deterministic"
+        ],
+        "lines": 1
+      },
+      {
+        "anchor": "\"\"\"Execute the TAO loop, letting the AI decide which tools to call.\"\"\"",
+        "title": "Seed the conversation",
+        "note": "**Starts the message list with the SYSTEM prompt and the user's question.**"
+      },
+      {
+        "anchor": "# Get AI's next step",
+        "title": "Ask the model",
+        "note": "**Sends the running conversation to the LLM and prints its Thought/Action reply.**"
+      },
+      {
+        "anchor": "action_line = response.split(\"Action:\")[1]",
+        "title": "Parse Action & Args",
+        "note": "**Pulls the tool name and JSON args out of the model's text reply.**"
+      },
+      {
+        "anchor": "tool_name = action_line",
+        "title": "Look up the tool",
+        "note": "**Resolves the chosen tool name to its Python function via TOOLS.**"
+      },
+      {
+        "anchor": "args = json.loads(args_text)",
+        "title": "Call the tool",
+        "note": "**Parses the JSON args and invokes the tool — this is the 'Action'.**",
+        "endAnchor": "tool_func(**args)"
+      },
+      {
+        "anchor": "messages.append({\"role\": \"assistant\", \"content\": response})",
+        "title": "Record the observation",
+        "note": "**Feeds the tool result back so the loop can continue (the 'Observation').**",
+        "endAnchor": "f\"Observation: {observation}\""
+      },
+      {
+        "anchor": "You are a weather agent with one tool:",
+        "title": "System prompt: persona",
+        "note": "**Sets the role — a weather agent with a single get_weather tool.**"
+      },
+      {
+        "anchor": "get_weather(lat:float, lon:float)",
+        "title": "System prompt: format & rules",
+        "note": [
+          "**Defines the strict Thought/Action/Args format and the get_weather tool contract.**",
+          "- Examples pin the exact shape; RULES forbid making up results",
+          "- 'Final:' switches to a plain-text answer"
+        ],
+        "endAnchor": "5. After \"Final:\" output ONLY plain text - do NOT use Thought/Action/Args format"
+      }
+    ],
+    "labs/common/lab3_server_solution.txt": [
+      {
+        "anchor": "def get_weather(lat: float, lon: float) -> dict:",
+        "title": "get_weather tool",
+        "note": [
+          "**Declares the weather MCP tool the agent calls.**",
+          "- The @mcp.tool decorator above registers it over MCP"
+        ],
+        "lines": 1
+      },
+      {
+        "anchor": "url = (",
+        "title": "get_weather: build request",
+        "note": "**Builds the Open-Meteo current-weather URL from the lat/lon arguments.**",
+        "endAnchor": ")"
+      },
+      {
+        "anchor": "# Extract and return weather data",
+        "title": "get_weather: parse response",
+        "note": "**Returns temperature, the WMO weather code, and a friendly condition label.**"
+      },
+      {
+        "anchor": "def convert_c_to_f(c: float) -> float:",
+        "title": "convert_c_to_f tool",
+        "note": "**Tiny MCP tool the agent calls to turn Celsius into Fahrenheit.**"
+      },
+      {
+        "anchor": "url = \"https://geocoding-api.open-meteo.com/v1/search\"",
+        "title": "geocode_location: build request",
+        "note": [
+          "**Turns a place name into coordinates via Open-Meteo geocoding.**",
+          "- Retries make it robust to transient API failures"
+        ],
+        "endAnchor": "last_error = None"
+      },
+      {
+        "anchor": "mcp.run(",
+        "title": "Start the MCP server",
+        "note": [
+          "**Runs the server on streamable-HTTP at 127.0.0.1:8000/mcp/.**",
+          "- The agent connects to this endpoint"
+        ]
+      }
+    ],
+    "labs/common/lab3_agent_solution_dynamic.txt": [
+      {
+        "anchor": "async def run_dynamic(city: str, max_steps: int = 10) -> None:",
+        "title": "Dynamic agent entry",
+        "note": "**Async loop where the LLM — not the code — picks which MCP tool to call each step.**",
+        "lines": 8
+      },
+      {
+        "anchor": "Dynamic TAO Agent",
+        "title": "Init run context",
+        "note": "**Prints the banner and sets up a context dict to collect results across steps.**",
+        "endAnchor": "}"
+      },
+      {
+        "anchor": "# Get LLM's decision",
+        "title": "Get & parse LLM step",
+        "note": "**Asks the LLM for its next Action and parses it; bails out if none is found.**",
+        "endAnchor": "return"
+      },
+      {
+        "anchor": "# Dynamically call the tool the LLM selected",
+        "title": "Announce tool call",
+        "note": "**Logs which MCP tool the LLM chose and its args before dispatching.**"
+      },
+      {
+        "anchor": "result = unwrap(await mcp.call_tool(action, args))",
+        "title": "Dispatch via MCP",
+        "note": [
+          "**Calls whatever tool the LLM named, through the MCP client.**",
+          "- unwrap() pulls the plain value out of the MCP response"
+        ],
+        "lines": 1
+      },
+      {
+        "anchor": "context[\"temperature_f\"] = float(result)",
+        "title": "Store result & observe",
+        "note": "**Saves the tool result into context and feeds the Observation back to the LLM.**",
+        "endAnchor": "\"content\": observation"
+      },
+      {
+        "anchor": "geocode_location(name: str)",
+        "title": "System prompt: tools & TAO format",
+        "note": [
+          "**Catalogues the three tools and the exact Thought/Action/Args format the LLM must emit.**",
+          "- Action: DONE with Args {} ends the loop",
+          "- Examples keep the output parseable"
+        ],
+        "endAnchor": "Do NOT add extra text. Do NOT explain after your three lines."
+      }
+    ],
+    "labs/common/lab5_server_solution.txt": [
+      {
+        "anchor": "import re",
+        "title": "Import re",
+        "note": "**Adds regex support used to split PDF text into lines.**",
+        "lines": 1
+      },
+      {
+        "anchor": "from pathlib import Path",
+        "title": "Path & typing imports",
+        "note": "**Filesystem paths and type hints for the new RAG code.**"
+      },
+      {
+        "anchor": "import chromadb",
+        "title": "RAG library imports",
+        "note": [
+          "**Brings in ChromaDB (vector store) and pdfplumber (PDF text).**",
+          "- DefaultEmbeddingFunction turns text into vectors"
+        ],
+        "endAnchor": "import pdfplumber"
+      },
+      {
+        "anchor": "ChromaDB setup for office RAG search",
+        "title": "ChromaDB RAG setup",
+        "note": [
+          "**Sets up the vector DB and helpers that index the office PDF on startup.**",
+          "- open_collection() builds the index if the DB is empty",
+          "- This is the 'Retrieval' half of RAG"
+        ],
+        "endAnchor": "MCP Server initialization and tool definitions"
+      },
+      {
+        "anchor": "Office Search Tool (NEW in Lab 5)",
+        "title": "search_offices RAG tool",
+        "note": [
+          "**New @mcp.tool: embeds the query and returns the top-K matching office chunks.**",
+          "- The agent calls this to ground answers in the PDF data"
+        ],
+        "endAnchor": ".join(docs)"
+      },
+      {
+        "anchor": "def get_weather(lat: float, lon: float) -> dict:",
+        "title": "get_weather tool",
+        "note": [
+          "**Declares the weather MCP tool the agent calls.**",
+          "- The @mcp.tool decorator above registers it over MCP"
+        ],
+        "lines": 1
+      },
+      {
+        "anchor": "url = (",
+        "title": "get_weather: build request",
+        "note": "**Builds the Open-Meteo current-weather URL from the lat/lon arguments.**",
+        "endAnchor": ")"
+      },
+      {
+        "anchor": "# Extract and return weather data",
+        "title": "get_weather: parse response",
+        "note": "**Returns temperature, the WMO weather code, and a friendly condition label.**"
+      },
+      {
+        "anchor": "def convert_c_to_f(c: float) -> float:",
+        "title": "convert_c_to_f tool",
+        "note": "**Tiny MCP tool the agent calls to turn Celsius into Fahrenheit.**"
+      },
+      {
+        "anchor": "url = \"https://geocoding-api.open-meteo.com/v1/search\"",
+        "title": "geocode_location: build request",
+        "note": [
+          "**Turns a place name into coordinates via Open-Meteo geocoding.**",
+          "- Retries make it robust to transient API failures"
+        ],
+        "endAnchor": "last_error = None"
+      },
+      {
+        "anchor": "mcp.run(",
+        "title": "Start the MCP server",
+        "note": [
+          "**Runs the server on streamable-HTTP at 127.0.0.1:8000/mcp/.**",
+          "- The agent connects to this endpoint"
+        ]
+      }
+    ],
+    "labs/common/lab5_agent_solution.txt": [
+      {
+        "anchor": "# Regex for parsing LLM responses (same pattern as Labs 2 and 3)",
+        "title": "Response parsers",
+        "note": "**Regexes that pull the Action and Args out of the LLM's text reply.**"
+      },
+      {
+        "anchor": "llm = ChatOllama(model=\"llama3.2:latest\", temperature=0.0)",
+        "title": "Seed the RAG loop",
+        "note": [
+          "**Creates the local LLM and seeds messages with SYSTEM + user prompt.**",
+          "- The agent only orchestrates; every tool call goes through MCP"
+        ],
+        "endAnchor": "]"
+      },
+      {
+        "anchor": "# Ask the LLM what to do next",
+        "title": "Get & parse next action",
+        "note": "**Asks the LLM for its next step and extracts the tool name it chose.**",
+        "endAnchor": "action = action_match.group(1).lower()"
+      },
+      {
+        "anchor": "if action == \"done\":",
+        "title": "Handle DONE",
+        "note": "**When the LLM says done, prints the collected office + weather summary.**",
+        "endAnchor": "print()"
+      },
+      {
+        "anchor": "raw = await mcp.call_tool(action, args)",
+        "title": "Call tool via MCP",
+        "note": "**Uniform dispatch: every tool (RAG, weather, convert) goes through one MCP call.**",
+        "endAnchor": "result = unwrap(raw)"
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: RAG tool catalogue",
+        "note": [
+          "**Describes the four tools and the three-line response format.**",
+          "- 'ALWAYS call search_offices first' drives the RAG retrieval step"
+        ],
+        "endAnchor": "Args: <valid JSON arguments for the tool>"
+      },
+      {
+        "anchor": "Thought: I need to search for office information about HQ",
+        "title": "System prompt: worked example",
+        "note": "**A full example run (search → geocode → weather → convert) showing the exact format.**",
+        "endAnchor": "Args: {\"c\": 25.0}"
+      },
+      {
+        "anchor": "Do NOT put arguments on the Action line. Arguments go ONLY in the Args line as JSON.",
+        "title": "System prompt: RULES",
+        "note": [
+          "**Hard rules: search first, use the top hit's city, city-only geocoding, never invent data.**",
+          "- These rein in the small model's tendency to wander"
+        ],
+        "endAnchor": "7. Do NOT add extra text beyond the three lines"
+      }
+    ],
+    "labs/common/lab5_agent_solution_v2.txt": [
+      {
+        "anchor": "# Regex for parsing LLM responses (same pattern as Labs 2 and 3)",
+        "title": "Response parsers",
+        "note": "**Regexes that pull the Action and Args out of the LLM's text reply.**"
+      },
+      {
+        "anchor": "llm = ChatOllama(model=\"llama3.2:latest\", temperature=0.0)",
+        "title": "Seed the RAG loop",
+        "note": [
+          "**Creates the local LLM and seeds messages with SYSTEM + user prompt.**",
+          "- The agent only orchestrates; every tool call goes through MCP"
+        ],
+        "endAnchor": "]"
+      },
+      {
+        "anchor": "# Ask the LLM what to do next",
+        "title": "Get & parse next action",
+        "note": "**Asks the LLM for its next step and extracts the tool name it chose.**",
+        "endAnchor": "action = action_match.group(1).lower()"
+      },
+      {
+        "anchor": "if action == \"done\":",
+        "title": "Handle DONE (v2 summary)",
+        "note": [
+          "**v2: if the LLM included 'Final:', print that natural-language summary.**",
+          "- Falls back to the raw data dump if there's no Final: line"
+        ],
+        "endAnchor": "print()"
+      },
+      {
+        "anchor": "raw = await mcp.call_tool(action, args)",
+        "title": "Call tool via MCP",
+        "note": "**Uniform dispatch: every tool (RAG, weather, convert) goes through one MCP call.**",
+        "endAnchor": "result = unwrap(raw)"
+      },
+      {
+        "anchor": "print(\"RAG-Enhanced Office Weather Agent (v2 — LLM summaries)\")",
+        "title": "v2 startup banner",
+        "note": "**Banner marking the summary-enhanced version of the agent.**",
+        "lines": 1
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: RAG tool catalogue",
+        "note": [
+          "**Describes the four tools and the three-line response format.**",
+          "- 'ALWAYS call search_offices first' drives the RAG retrieval step"
+        ],
+        "endAnchor": "Args: <valid JSON arguments for the tool>"
+      },
+      {
+        "anchor": "Thought: I need to search for office information about HQ",
+        "title": "System prompt: worked example",
+        "note": "**A full example run (search → geocode → weather → convert) showing the exact format.**",
+        "endAnchor": "Args: {\"c\": 25.0}"
+      },
+      {
+        "anchor": "Final: <a friendly 2-3 sentence summary including the office name and",
+        "title": "System prompt: Final summary spec",
+        "note": "**v2: end with a friendly summary — office, city, weather in °F, and one city fact.**"
+      },
+      {
+        "anchor": "Do NOT put arguments on the Action line. Arguments go ONLY in the Args line as JSON.",
+        "title": "System prompt: RULES (v2)",
+        "note": [
+          "**Same guardrails as v1, plus rule 7: you may add one city fact from your own knowledge.**",
+          "- Office and weather data must still come only from tools"
+        ],
+        "endAnchor": "8. Do NOT add extra text beyond the required format"
+      }
+    ],
+    "labs/common/lab6_agent_solution.txt": [
+      {
+        "anchor": "our modules",
+        "title": "Import provider & guardrails",
+        "note": [
+          "**Swaps in get_llm() (local-or-cloud) and the three guardrail checks.**",
+          "- Replaces the hard-coded ChatOllama from earlier labs"
+        ]
+      },
+      {
+        "anchor": "# Regex for parsing LLM responses (same pattern as Labs 2 and 3)",
+        "title": "Parsers + stdio server path",
+        "note": [
+          "**Keeps the Action/Args regexes and points at the MCP server as a subprocess.**",
+          "- FastMCP auto-starts the .py over stdin/stdout — no separate server run"
+        ],
+        "endAnchor": "mcp_stdio_wrapper.py\")"
+      },
+      {
+        "anchor": "async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:",
+        "title": "Deployable agent entry",
+        "note": "**Async agent that embeds the MCP server via stdio instead of HTTP.**"
+      },
+      {
+        "anchor": "started via stdio transport",
+        "title": "Input guardrail + seed",
+        "note": [
+          "**Runs check_input() before the LLM sees the prompt, then seeds messages.**",
+          "- A blocked prompt returns a refusal immediately"
+        ],
+        "endAnchor": "]"
+      },
+      {
+        "anchor": "# Start MCP server as subprocess and connect via stdio",
+        "title": "Spawn MCP over stdio",
+        "note": "**Opens the MCP client, which launches the server as a child process over stdin/stdout.**",
+        "endAnchor": "async with Client(MCP_SERVER) as mcp:"
+      },
+      {
+        "anchor": "# Ask the LLM what to do next",
+        "title": "Get & parse next action",
+        "note": "**Asks the LLM for its next step and extracts the tool name it chose.**",
+        "endAnchor": "action = action_match.group(1).lower()"
+      },
+      {
+        "anchor": "if action == \"done\":",
+        "title": "Handle DONE (ask for Final)",
+        "note": "**On done, if the model skipped 'Final:', asks it once more for a summary.**"
+      },
+      {
+        "anchor": "final = check_output(final)",
+        "title": "Output guardrail + return",
+        "note": "**Extracts the Final answer and scrubs it through check_output before returning.**",
+        "endAnchor": "return final"
+      },
+      {
+        "anchor": "raw = await mcp.call_tool(action, args)",
+        "title": "Call tool via MCP",
+        "note": "**Uniform dispatch: every tool (RAG, weather, convert) goes through one MCP call.**",
+        "endAnchor": "result = unwrap(raw)"
+      },
+      {
+        "anchor": "# ── Guardrail: check tool result for injected content ──",
+        "title": "Tool-result guardrail",
+        "note": [
+          "**Scans each tool result for injected instructions before the LLM sees it.**",
+          "- Poisoned RAG/API data gets sanitised here"
+        ]
+      },
+      {
+        "anchor": "# Feed the observation back to the LLM.",
+        "title": "Trim to one TAO step",
+        "note": [
+          "**Appends only the first Thought/Action/Args triplet back to the model.**",
+          "- Stops multi-step planners from confusing the loop"
+        ],
+        "endAnchor": "messages.append({\"role\": \"assistant\", \"content\": first_step})"
+      },
+      {
+        "anchor": "return \"Reached maximum steps without completing.\"",
+        "title": "Max-steps fallback",
+        "note": "**Safety exit if the agent never emits done within max_steps.**"
+      },
+      {
+        "anchor": "Synchronous wrapper (for Gradio and command-line use)",
+        "title": "Sync run_agent wrapper",
+        "note": "**asyncio.run() wrapper so Gradio and the CLI can call the async agent.**",
+        "endAnchor": "Interactive loop"
+      },
+      {
+        "anchor": "print(\"=\" * 60)",
+        "title": "CLI banner",
+        "note": "**Prints the 'Deployable Version' header for the interactive loop.**",
+        "endAnchor": "print(\"=\" * 60)"
+      },
+      {
+        "anchor": "run_agent(prompt)",
+        "title": "Run one query",
+        "note": "**Calls the agent for each line the user types in the REPL.**",
+        "lines": 1
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: tools, one-step rule",
+        "note": [
+          "**Four-tool catalogue plus the key change: emit ONE Thought/Action/Args, then wait.**",
+          "- Stops multi-step planners (HF models) from confusing the loop"
+        ],
+        "endAnchor": "Args: <valid JSON arguments for the tool>"
+      },
+      {
+        "anchor": "Thought: I need to search for office information about HQ",
+        "title": "System prompt: worked example",
+        "note": "**A full example run (search → geocode → weather → convert) showing the exact format.**",
+        "endAnchor": "Args: {\"c\": 25.0}"
+      },
+      {
+        "anchor": "Final: <a friendly 2-3 sentence summary including the office name and",
+        "title": "System prompt: Final summary spec",
+        "note": "**End with a friendly summary — office, city, weather in °F, and one city fact.**"
+      },
+      {
+        "anchor": "Do NOT put arguments on the Action line. Arguments go ONLY in the Args line as JSON.",
+        "title": "System prompt: RULES (deployable)",
+        "note": [
+          "**v1 rules plus rule 9: one Thought/Action/Args per message — never plan ahead.**",
+          "- Rule 9 is what keeps the larger HF model in step"
+        ],
+        "endAnchor": "9. Respond with ONLY ONE Thought/Action/Args per message — NEVER plan ahead"
+      }
+    ],
+    "labs/common/lab7_gradio_solution.txt": [
+      {
+        "anchor": "def chat_handler(message: str, history: list) -> tuple:",
+        "title": "Chat handler",
+        "note": [
+          "**Runs a user message through run_agent() and appends the reply to history.**",
+          "- Demo mode kicks in if the agent isn't importable yet"
+        ],
+        "lines": 37
+      },
+      {
+        "anchor": "chatbot = gr.Chatbot(",
+        "title": "Chat UI layout",
+        "note": "**Builds the chatbot, input box, Send/Clear buttons, and example-query buttons.**",
+        "endAnchor": "West Coast details"
+      },
+      {
+        "anchor": "# Send button and Enter key both trigger chat_handler",
+        "title": "Wire up events",
+        "note": "**Connects Send/Enter to chat_handler and the example buttons to the input box.**",
+        "endAnchor": "West Coast office"
+      }
+    ],
+    "labs/common/lab8_server_solution.txt": [
+      {
+        "anchor": "import re",
+        "title": "Import re",
+        "note": "**Adds regex support used to split PDF text into lines.**",
+        "lines": 1
+      },
+      {
+        "anchor": "from pathlib import Path",
+        "title": "Path & typing imports",
+        "note": "**Filesystem paths and type hints for the new RAG code.**"
+      },
+      {
+        "anchor": "import chromadb",
+        "title": "RAG library imports",
+        "note": [
+          "**Brings in ChromaDB (vector store) and pdfplumber (PDF text).**",
+          "- DefaultEmbeddingFunction turns text into vectors"
+        ],
+        "endAnchor": "import pdfplumber"
+      },
+      {
+        "anchor": "ChromaDB setup for office RAG search",
+        "title": "ChromaDB RAG setup",
+        "note": [
+          "**Sets up the vector DB and helpers that index the office PDF on startup.**",
+          "- open_collection() builds the index if the DB is empty",
+          "- This is the 'Retrieval' half of RAG"
+        ],
+        "endAnchor": "MCP Server initialization and tool definitions"
+      },
+      {
+        "anchor": "Office Search Tool",
+        "title": "RAG tools (search + 2 new)",
+        "note": [
+          "**search_offices plus two NEW tools: find_offices_by_service and list_all_offices.**",
+          "- Service search returns 8 hits; list-all returns 20 for overviews",
+          "- More tools = the LLM must reason about which to pick"
+        ],
+        "lines": 88
+      },
+      {
+        "anchor": "def get_weather(lat: float, lon: float) -> dict:",
+        "title": "get_weather tool",
+        "note": [
+          "**Declares the weather MCP tool the agent calls.**",
+          "- The @mcp.tool decorator above registers it over MCP"
+        ],
+        "lines": 1
+      },
+      {
+        "anchor": "url = (",
+        "title": "get_weather: build request",
+        "note": "**Builds the Open-Meteo current-weather URL from the lat/lon arguments.**",
+        "endAnchor": ")"
+      },
+      {
+        "anchor": "# Extract and return weather data",
+        "title": "get_weather: parse response",
+        "note": "**Returns temperature, the WMO weather code, and a friendly condition label.**"
+      },
+      {
+        "anchor": "def convert_c_to_f(c: float) -> float:",
+        "title": "convert_c_to_f tool",
+        "note": "**Tiny MCP tool the agent calls to turn Celsius into Fahrenheit.**"
+      },
+      {
+        "anchor": "url = \"https://geocoding-api.open-meteo.com/v1/search\"",
+        "title": "geocode_location: build request",
+        "note": [
+          "**Turns a place name into coordinates via Open-Meteo geocoding.**",
+          "- Retries make it robust to transient API failures"
+        ],
+        "endAnchor": "last_error = None"
+      },
+      {
+        "anchor": "mcp.run(",
+        "title": "Start the MCP server",
+        "note": [
+          "**Runs the server on streamable-HTTP at 127.0.0.1:8000/mcp/.**",
+          "- The agent connects to this endpoint"
+        ]
+      }
+    ],
+    "labs/common/lab8_agent_solution.txt": [
+      {
+        "anchor": "our modules",
+        "title": "Import provider & guardrails",
+        "note": [
+          "**Swaps in get_llm() (local-or-cloud) and the three guardrail checks.**",
+          "- Replaces the hard-coded ChatOllama from earlier labs"
+        ]
+      },
+      {
+        "anchor": "# Regex for parsing LLM responses (same pattern as earlier labs)",
+        "title": "Parsers + memory cap",
+        "note": "**Keeps the Action/Args regexes and adds MAX_MEMORY = 5 (exchanges to remember).**",
+        "endAnchor": "MAX_MEMORY = 5"
+      },
+      {
+        "anchor": "async def _run_agent_async(prompt: str, memory: list = None,",
+        "title": "Memory-aware entry",
+        "note": "**Agent loop that now takes a memory list and returns updated memory.**"
+      },
+      {
+        "anchor": "Memory is a list of (question, answer) tuples from previous",
+        "title": "Build memory context",
+        "note": [
+          "**Injects recent Q&A pairs into the system prompt so follow-ups resolve.**",
+          "- This is why 'What services do they offer?' knows 'they' = last office"
+        ],
+        "lines": 31
+      },
+      {
+        "anchor": "print(f\"  (Memory: {len(memory)} previous exchange(s))\")",
+        "title": "Memory indicator",
+        "note": "**Logs how many prior exchanges are in play for this query.**",
+        "lines": 1
+      },
+      {
+        "anchor": "# Start MCP server as subprocess and connect via stdio",
+        "title": "Spawn MCP over stdio",
+        "note": "**Opens the MCP client, which launches the server as a child process over stdin/stdout.**",
+        "endAnchor": "async with Client(MCP_SERVER) as mcp:"
+      },
+      {
+        "anchor": "# Ask the LLM what to do next",
+        "title": "Get & parse next action",
+        "note": "**Asks the LLM for its next step and extracts the tool name it chose.**",
+        "endAnchor": "action = action_match.group(1).lower()"
+      },
+      {
+        "anchor": "if action == \"done\":",
+        "title": "Handle DONE (ask for Final)",
+        "note": "**On done, if the model skipped 'Final:', asks it once more for a summary.**"
+      },
+      {
+        "anchor": "final = check_output(final)",
+        "title": "Output guardrail + save memory",
+        "note": [
+          "**Scrubs the Final answer, then stores the Q&A pair in memory before returning.**",
+          "- The stored pair powers the next follow-up"
+        ],
+        "endAnchor": "return final, memory"
+      },
+      {
+        "anchor": "raw = await mcp.call_tool(action, args)",
+        "title": "Call tool via MCP",
+        "note": "**Uniform dispatch: every tool (RAG, weather, convert) goes through one MCP call.**",
+        "endAnchor": "result = unwrap(raw)"
+      },
+      {
+        "anchor": "# ── Guardrail: check tool result for injected content ──",
+        "title": "Tool-result guardrail",
+        "note": [
+          "**Scans each tool result for injected instructions before the LLM sees it.**",
+          "- Poisoned RAG/API data gets sanitised here"
+        ]
+      },
+      {
+        "anchor": "# Feed the observation back to the LLM.",
+        "title": "Trim to one TAO step",
+        "note": [
+          "**Appends only the first Thought/Action/Args triplet back to the model.**",
+          "- Stops multi-step planners from confusing the loop"
+        ],
+        "endAnchor": "messages.append({\"role\": \"assistant\", \"content\": first_step})"
+      },
+      {
+        "anchor": "fallback = \"Reached maximum steps without completing.\"",
+        "title": "Max-steps fallback",
+        "note": "**Safety exit; still records the exchange so memory stays consistent.**"
+      },
+      {
+        "anchor": "Synchronous wrapper (for Gradio and command-line use)",
+        "title": "Sync run_agent wrapper",
+        "note": "**asyncio.run() wrapper; now threads memory in and out for Gradio/CLI.**",
+        "endAnchor": "Interactive loop"
+      },
+      {
+        "anchor": "print(\"=\" * 60)",
+        "title": "CLI banner",
+        "note": "**Prints the 'Conversational — with Memory' header.**",
+        "endAnchor": "print(\"=\" * 60)"
+      },
+      {
+        "anchor": "Then try follow-ups",
+        "title": "REPL help text",
+        "note": "**Tells the user about follow-ups and the memory / clear commands.**",
+        "endAnchor": "reset memory"
+      },
+      {
+        "anchor": "memory = []",
+        "title": "Init memory list",
+        "note": "**Starts an empty conversation memory for the REPL session.**"
+      },
+      {
+        "anchor": "if prompt.lower() == \"memory\":",
+        "title": "memory / clear commands",
+        "note": "**Handles the 'memory' (show history) and 'clear' (reset) REPL commands.**",
+        "lines": 14
+      },
+      {
+        "anchor": "result, memory = run_agent(prompt, memory=memory)",
+        "title": "Run with memory",
+        "note": "**Calls the agent passing memory in and capturing the updated memory out.**",
+        "lines": 1
+      },
+      {
+        "anchor": "You are an intelligent office information assistant with memory of our",
+        "title": "System prompt: persona (memory)",
+        "note": "**Sets the role: a memory-aware office assistant using RAG, weather, and reasoning.**"
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: tools header",
+        "note": "**Introduces the six-tool catalogue that follows.**"
+      },
+      {
+        "anchor": "search_offices(query: str)",
+        "title": "System prompt: search_offices spec",
+        "note": [
+          "**Documents search_offices and the exact office-chunk field order.**",
+          "- Name | Address | Employees | Revenue | Services — stops the model misreading fields"
+        ]
+      },
+      {
+        "anchor": "find_offices_by_service(service: str)",
+        "title": "System prompt: service tool spec",
+        "note": "**find_offices_by_service — used for 'which offices do X?' questions.**"
+      },
+      {
+        "anchor": "Lists all offices with details. No arguments needed.",
+        "title": "System prompt: routing & query types",
+        "note": [
+          "**Covers list_all_offices, geocode/weather/convert, the one-step rule, and the 5 QUERY TYPES.**",
+          "- The query-type table tells the LLM which tools to pick (weather only for type 1)"
+        ],
+        "endAnchor": "When you have gathered all information, respond with:"
+      },
+      {
+        "anchor": "Final: <a helpful summary answering the user's question>",
+        "title": "System prompt: Final spec",
+        "note": "**The model ends with a plain-text Final: summary answering the question.**"
+      },
+      {
+        "anchor": "Do NOT put arguments on the Action line. Arguments go ONLY in Args as JSON.",
+        "title": "System prompt: RULES (conversational)",
+        "note": [
+          "**Rules for the memory agent: use history for follow-ups, pick tools by query type.**",
+          "- Rule 2: don't always fetch weather — service/comparison queries skip it"
+        ],
+        "endAnchor": "9. Respond with ONLY ONE Thought/Action/Args per message — NEVER plan ahead"
+      }
+    ],
+    "labs/common/lab8_gradio_solution.txt": [
+      {
+        "anchor": "import warnings",
+        "title": "Silence noisy warnings",
+        "note": "**Filters Gradio/pandas deprecation warnings so the console stays clean.**"
+      },
+      {
+        "anchor": "def chat_handler(message: str, history: list, memory: list) -> tuple:",
+        "title": "Memory-aware chat handler",
+        "note": [
+          "**chat_handler now threads memory through run_agent and returns a memory badge.**",
+          "- _memory_html() renders the sidebar history indicator"
+        ],
+        "endAnchor": "</ul></div>"
+      },
+      {
+        "anchor": "# ── Persistent memory state (survives across queries) ──",
+        "title": "Gradio memory state",
+        "note": "**gr.State holds the (Q,A) memory across queries within a browser session.**"
+      },
+      {
+        "anchor": "chatbot = gr.Chatbot(",
+        "title": "Chat UI + follow-up buttons",
+        "note": "**Adds four example buttons, including a follow-up and a comparison query.**",
+        "endAnchor": "Compare Tokyo and London"
+      },
+      {
+        "anchor": "gr.Markdown(\"### Conversation Memory\")",
+        "title": "Memory sidebar",
+        "note": "**Adds the sidebar panel that shows the running conversation memory.**"
+      },
+      {
+        "anchor": "Smart Routing",
+        "title": "How-it-works copy",
+        "note": "**Sidebar text describing routing → RAG → weather → memory → summary.**",
+        "endAnchor": "LLM composes a conversational answer"
+      },
+      {
+        "anchor": "# Send button and Enter key both trigger chat_handler",
+        "title": "Wire events with memory",
+        "note": "**All handlers now pass memory_state in/out; Clear resets both chat and memory.**",
+        "endAnchor": "Compare the Tokyo and London offices"
+      },
+      {
+        "anchor": "print(\"AI Office Assistant — Conversational Interface\")",
+        "title": "Launch banner",
+        "note": "**Console banner printed when the conversational app starts.**",
+        "lines": 1
+      }
+    ]
+  }
+}
