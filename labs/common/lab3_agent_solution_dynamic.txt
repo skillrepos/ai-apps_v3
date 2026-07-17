@@ -31,21 +31,33 @@ from langchain_ollama import ChatOllama
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 1.  Enhanced system prompt for dynamic tool selection            ║
 # ╚══════════════════════════════════════════════════════════════════╝
-SYSTEM = textwrap.dedent("""
+# ─── Tool catalogue rendering (from live MCP discovery) ──────────────
+
+def _render_tool_catalogue(tools) -> str:
+    """
+    Build the tool catalogue from the MCP server's tools/list response.
+
+    This is real capability discovery — the names, signatures and
+    descriptions below come from the server at runtime. Add a tool to
+    mcp_server.py and it shows up here automatically; the agent needs
+    no changes.
+    """
+    blocks = []
+    for t in sorted(tools, key=lambda x: x.name):
+        schema = getattr(t, "inputSchema", None) or {}
+        props = schema.get("properties", {}) or {}
+        params = ", ".join(f"{n}: {p.get('type', 'any')}" for n, p in props.items())
+        desc = textwrap.dedent((t.description or "").strip())
+        blocks.append(f"{t.name}({params})\n" + textwrap.indent(desc, "    "))
+    return "\n\n".join(blocks)
+
+# ─── System prompt template — the <<TOOL_CATALOGUE>> sentinel is ─────
+# ─── filled in at runtime from what the MCP server reports.      ─────
+
+SYSTEM_TEMPLATE = textwrap.dedent("""
 You are a weather information agent with access to these tools:
 
-geocode_location(name: str)
-    Converts a city/location name to coordinates
-    Returns: {"latitude": float, "longitude": float, "name": str}
-
-get_weather(lat: float, lon: float)
-    Gets current weather for coordinates
-    Returns: {"temperature": float, "code": int, "conditions": str}
-    Note: Temperature is in Celsius
-
-convert_c_to_f(c: float)
-    Converts Celsius to Fahrenheit
-    Returns: float
+<<TOOL_CATALOGUE>>
 
 IMPORTANT: When you have enough information to answer the user's question,
 respond with:
@@ -56,7 +68,7 @@ Args: {}
 For each step where you need to call a tool, respond with EXACTLY three lines:
 
 Thought: <your reasoning about what to do next>
-Action: <exact tool name: geocode_location, get_weather, convert_c_to_f, or DONE>
+Action: <exact tool name from the catalogue above, or DONE>
 Args: <valid JSON arguments for the tool>
 
 Examples:
@@ -136,8 +148,13 @@ async def run_dynamic(city: str, max_steps: int = 10) -> None:
     llm = ChatOllama(model="llama3.2", temperature=0.0)
 
     async with Client("http://127.0.0.1:8000/mcp/") as mcp:
+        # ── Real MCP discovery: ask the server what tools it exposes ──
+        tools = await mcp.list_tools()
+        system = SYSTEM_TEMPLATE.replace("<<TOOL_CATALOGUE>>", _render_tool_catalogue(tools))
+        print(f"  (Discovered {len(tools)} tools from the MCP server)")
+
         messages = [
-            {"role": "system", "content": SYSTEM},
+            {"role": "system", "content": system},
             {"role": "user", "content": f"What is the current weather in {city}?"},
         ]
 

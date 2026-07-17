@@ -132,19 +132,14 @@ mcp = FastMCP("WeatherServer")
 @mcp.tool
 def search_offices(query: str) -> str:
     """
-    Search the office vector database for relevant information.
-    This is the 'Retrieval' part of RAG — semantic search over
-    the office PDF data.
+    Search the company office database for offices matching a query.
 
-    Parameters
-    ----------
-    query : str
-        Natural language search query (e.g., "HQ", "Southern office")
-
-    Returns
-    -------
-    str
-        Top matching text chunks, separated by '---'
+    This is the 'Retrieval' half of RAG — semantic search over the
+    office PDF data indexed in Lab 4. Takes a natural language query
+    (e.g. "HQ", "Southern office").
+    Returns the top matching rows separated by '---'. Each row lists,
+    in order: Office Name | Address | Number of Employees |
+    Revenue (USD) | Services Offered.
     """
     query_vec = embed_fn([query])[0]
     res = coll.query(
@@ -162,30 +157,18 @@ def search_offices(query: str) -> str:
 @mcp.tool
 def get_weather(lat: float, lon: float) -> dict:
     """
-    Fetch **current weather** from Open-Meteo and return a concise dict.
+    Get the CURRENT weather at a latitude/longitude.
 
-    Retry policy
-    ------------
-    * Up to MAX_RETRIES total attempts with fresh connections.
-    * Retries on network errors **or** HTTP 429/5xx.
-    * Exponential back-off (1.5 s, 2.25 s, …).
-    * Each retry uses a new session to avoid connection pool issues.
-
-    Parameters
-    ----------
-    lat, lon : float
-        Geographic coordinates in decimal degrees.
-
-    Returns
-    -------
-    dict
-        {
-            "temperature": <float °C>,
-            "code":        <int WMO weathercode>,
-            "conditions":  <friendly description>,
-            "error":       <error message if request failed>
-        }
+    Use after geocode_location has turned a place name into coordinates.
+    Returns {"temperature": °C, "code": WMO weather code, "conditions":
+    plain-English description}. The temperature is CELSIUS — call
+    convert_c_to_f if you need Fahrenheit. On failure returns
+    {"error": "..."} instead of raising, so you can report or retry.
     """
+    # Implementation note (not shown to the LLM — FastMCP only publishes
+    # the docstring above): up to MAX_RETRIES attempts, a fresh session
+    # each time, retrying on network errors or HTTP 429/5xx with
+    # exponential back-off (1.5 s, 2.25 s, …).
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}&current_weather=true"
@@ -249,7 +232,13 @@ def get_weather(lat: float, lon: float) -> dict:
 
 @mcp.tool
 def convert_c_to_f(c: float) -> float:
-    """Simple Celsius → Fahrenheit conversion."""
+    """
+    Convert a Celsius temperature to Fahrenheit.
+
+    Use whenever you have a Celsius value (for example the "temperature"
+    returned by get_weather) and need to report it in °F.
+    Returns the temperature in degrees Fahrenheit.
+    """
     return c * 9 / 5 + 32
 
 
@@ -258,30 +247,17 @@ def convert_c_to_f(c: float) -> float:
 @mcp.tool
 def geocode_location(name: str) -> dict:
     """
-    Geocode a location name to latitude/longitude coordinates using Open-Meteo's geocoding API.
+    Convert a place name into geographic coordinates.
 
-    Retry policy
-    ------------
-    * Up to MAX_RETRIES total attempts with fresh connections.
-    * Retries on network errors **or** HTTP 429/5xx.
-    * Exponential back-off (1.5 s, 2.25 s, …).
-    * Each retry uses a new session to avoid connection pool issues.
-
-    Parameters
-    ----------
-    name : str
-        Location name (e.g., "San Francisco", "Paris, France", "London, UK")
-
-    Returns
-    -------
-    dict
-        {
-            "latitude": <float>,
-            "longitude": <float>,
-            "name": <matched location name>,
-            "error": <error message if request failed>
-        }
+    Use when you have a city or location name and need lat/lon before
+    calling get_weather. Pass the bare city name ("Austin", not
+    "Austin, TX") — it matches far more reliably.
+    Returns {"latitude": float, "longitude": float, "name": matched
+    location name}, or {"error": "..."} if nothing matched.
     """
+    # Implementation note (not shown to the LLM): same retry policy as
+    # get_weather — MAX_RETRIES attempts, fresh session each time,
+    # exponential back-off on network errors or HTTP 429/5xx.
     url = "https://geocoding-api.open-meteo.com/v1/search"
     last_error = None
 

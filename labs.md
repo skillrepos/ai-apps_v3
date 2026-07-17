@@ -306,7 +306,7 @@ python mcp_server.py
 
 <br><br>
 
-4. We also have a small helper script that connects to the MCP server and **lists the available tools** (for demo purposes).
+4. We also have a small helper script that connects to the MCP server and **lists the available tools**.
   Take a look at the code in `tools/discover_tools.py`, then run it to print the server’s tool list: (**Make sure to click back in the terminal before typing the second command.**)
 
 ```
@@ -315,6 +315,8 @@ python tools/discover_tools.py
 ```
 
 ![Discovering tools](./images/v3appb4.png?raw=true "Discovering tools")
+
+The single line doing the work is `tools = await mcp.list_tools()` — a JSON-RPC `tools/list` request. Notice you never told the script what tools exist; it **asked the server**. Each tool comes back with a name, a description, and a JSON schema for its arguments. Keep that in mind for the next step — **the agent does exactly this**, rather than us hand-typing a tool list into its prompt. That's what makes this MCP and not just "an API call with extra steps": the server is the single source of truth for its own capabilities.
 
 <br><br>
 
@@ -1000,7 +1002,7 @@ code -d labs/common/lab8_agent_solution.txt labs/common/lab6_agent_solution.txt
 Ignore the file header and docstrings and look for these four things:
    - **`MAX_MEMORY = 5`** — how many exchanges we keep
    - **"Build memory context for the system prompt"** — the short loop that turns the last few (question, answer) pairs into a plain-text block
-   - **`{"role": "system", "content": SYSTEM + memory_context}`** — the whole trick. Memory is just *text appended to the system prompt*. There is no magic.
+   - **`{"role": "system", "content": system + memory_context}`** — the whole trick. Memory is just *text appended to the system prompt*. There is no magic.
    - **`memory.append((prompt, final))`** — remember this exchange for next time
 
    That's the entire memory feature. It's why "they" resolved to HQ in step 4.
@@ -1009,7 +1011,7 @@ Ignore the file header and docstrings and look for these four things:
 
 <br><br>
 
-10. **The system prompt — teaching the LLM to route.** In the same diff view, look at **Section 3**. The prompt now describes all 6 tools and spells out five **QUERY TYPES**:
+10. **The system prompt — teaching the LLM to route.** In the same diff view, look at **Section 3**. Notice what is *not* there: the tool list. The agent discovers all 6 tools from the MCP server at runtime (`await mcp.list_tools()`) and drops them into the `<<TOOL_CATALOGUE>>` slot — which is why adding two tools to the server in step 8 needed **no change to the agent at all**. What the prompt still owns is *routing policy* — five **QUERY TYPES**:
 
    | Query type | Example | Tools the LLM should pick |
    |---|---|---|

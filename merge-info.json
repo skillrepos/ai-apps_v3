@@ -120,6 +120,14 @@
           "**Runs the server on streamable-HTTP at 127.0.0.1:8000/mcp/.**",
           "- The agent connects to this endpoint"
         ]
+      },
+      {
+        "anchor": "Use whenever you have a Celsius value (for example",
+        "title": "LLM-facing tool description",
+        "note": [
+          "**This docstring IS what the model reads — MCP publishes it as the tool description.**",
+          "- Write tool docs for the model, not just for developers"
+        ]
       }
     ],
     "labs/common/lab3_agent_solution_dynamic.txt": [
@@ -162,14 +170,40 @@
         "endAnchor": "\"content\": observation"
       },
       {
-        "anchor": "geocode_location(name: str)",
-        "title": "System prompt: tools & TAO format",
+        "anchor": "# ── Real MCP discovery: ask the server what tools",
+        "title": "Real MCP tool discovery",
         "note": [
-          "**Catalogues the three tools and the exact Thought/Action/Args format the LLM must emit.**",
-          "- Action: DONE with Args {} ends the loop",
-          "- Examples keep the output parseable"
+          "**Asks the MCP server what tools it has — real capability discovery.**",
+          "- `list_tools()` = JSON-RPC `tools/list`; the catalogue is built from the reply",
+          "- Add a tool to mcp_server.py and it appears here with no agent change"
         ],
-        "endAnchor": "Do NOT add extra text. Do NOT explain after your three lines."
+        "endAnchor": "_render_tool_catalogue(tools)"
+      },
+      {
+        "anchor": "{\"role\": \"system\", \"content\": system},",
+        "title": "Seed with discovered prompt",
+        "note": "**Uses the runtime-built `system` string, not a hardcoded constant.**",
+        "lines": 1
+      },
+      {
+        "anchor": "You are a weather information agent with access to these tools:",
+        "title": "System prompt: discovered tools",
+        "note": [
+          "**The tool list is a `<<TOOL_CATALOGUE>>` slot filled from the server at runtime.**",
+          "- You just ran discover_tools.py by hand — the agent now does the same",
+          "- Nothing here names a tool; the server is the source of truth"
+        ],
+        "lines": 3
+      },
+      {
+        "anchor": "# ─── Tool catalogue rendering (from live MCP discovery) ──",
+        "title": "Render catalogue from MCP",
+        "note": [
+          "**Turns the server's `tools/list` reply into the text the LLM reads.**",
+          "- Uses each tool's name, JSON schema and description — all from the server",
+          "- This is why no tool is named anywhere in the prompt"
+        ],
+        "endAnchor": "return \"\\n\\n\".join(blocks)"
       }
     ],
     "labs/common/lab5_server_solution.txt": [
@@ -253,6 +287,14 @@
           "**Runs the server on streamable-HTTP at 127.0.0.1:8000/mcp/.**",
           "- The agent connects to this endpoint"
         ]
+      },
+      {
+        "anchor": "Use whenever you have a Celsius value (for example",
+        "title": "LLM-facing tool description",
+        "note": [
+          "**This docstring IS what the model reads — MCP publishes it as the tool description.**",
+          "- Write tool docs for the model, not just for developers"
+        ]
       }
     ],
     "labs/common/lab5_agent_solution.txt": [
@@ -289,15 +331,6 @@
         "endAnchor": "result = unwrap(raw)"
       },
       {
-        "anchor": "You have these tools:",
-        "title": "System prompt: RAG tool catalogue",
-        "note": [
-          "**Describes the four tools and the three-line response format.**",
-          "- 'ALWAYS call search_offices first' drives the RAG retrieval step"
-        ],
-        "endAnchor": "Args: <valid JSON arguments for the tool>"
-      },
-      {
         "anchor": "Thought: I need to search for office information about HQ",
         "title": "System prompt: worked example",
         "note": "**A full example run (search → geocode → weather → convert) showing the exact format.**",
@@ -311,6 +344,26 @@
           "- These rein in the small model's tendency to wander"
         ],
         "endAnchor": "7. Do NOT add extra text beyond the three lines"
+      },
+      {
+        "anchor": "def _render_tool_catalogue",
+        "title": "Render catalogue from MCP",
+        "note": [
+          "**Asks the MCP server what tools it has — real capability discovery.**",
+          "- `list_tools()` = JSON-RPC `tools/list`; the catalogue is built from the reply",
+          "- Add a tool to mcp_server.py and it appears here with no agent change"
+        ],
+        "endAnchor": "return \"\\n\\n\".join(blocks)"
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: discovered tools",
+        "note": [
+          "**The tool list is a `<<TOOL_CATALOGUE>>` slot filled from the MCP server at runtime.**",
+          "- `list_tools()` supplies names, signatures and descriptions",
+          "- The prompt keeps only the response format and rules"
+        ],
+        "lines": 3
       }
     ],
     "labs/common/lab5_agent_solution_v2.txt": [
@@ -356,15 +409,6 @@
         "lines": 1
       },
       {
-        "anchor": "You have these tools:",
-        "title": "System prompt: RAG tool catalogue",
-        "note": [
-          "**Describes the four tools and the three-line response format.**",
-          "- 'ALWAYS call search_offices first' drives the RAG retrieval step"
-        ],
-        "endAnchor": "Args: <valid JSON arguments for the tool>"
-      },
-      {
         "anchor": "Thought: I need to search for office information about HQ",
         "title": "System prompt: worked example",
         "note": "**A full example run (search → geocode → weather → convert) showing the exact format.**",
@@ -383,6 +427,26 @@
           "- Office and weather data must still come only from tools"
         ],
         "endAnchor": "8. Do NOT add extra text beyond the required format"
+      },
+      {
+        "anchor": "def _render_tool_catalogue",
+        "title": "Render catalogue from MCP",
+        "note": [
+          "**Asks the MCP server what tools it has — real capability discovery.**",
+          "- `list_tools()` = JSON-RPC `tools/list`; the catalogue is built from the reply",
+          "- Add a tool to mcp_server.py and it appears here with no agent change"
+        ],
+        "endAnchor": "return \"\\n\\n\".join(blocks)"
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: discovered tools",
+        "note": [
+          "**The tool list is a `<<TOOL_CATALOGUE>>` slot filled from the MCP server at runtime.**",
+          "- `list_tools()` supplies names, signatures and descriptions",
+          "- The prompt keeps only the response format and rules"
+        ],
+        "lines": 3
       }
     ],
     "labs/common/lab6_agent_solution.txt": [
@@ -487,15 +551,6 @@
         "lines": 1
       },
       {
-        "anchor": "You have these tools:",
-        "title": "System prompt: tools, one-step rule",
-        "note": [
-          "**Four-tool catalogue plus the key change: emit ONE Thought/Action/Args, then wait.**",
-          "- Stops multi-step planners (HF models) from confusing the loop"
-        ],
-        "endAnchor": "Args: <valid JSON arguments for the tool>"
-      },
-      {
         "anchor": "Thought: I need to search for office information about HQ",
         "title": "System prompt: worked example",
         "note": "**A full example run (search → geocode → weather → convert) showing the exact format.**",
@@ -529,6 +584,26 @@
         "title": "Memory seam: pass & capture",
         "note": "**Passes memory in and captures it back — inert in Lab 6, live in Lab 8.**",
         "lines": 1
+      },
+      {
+        "anchor": "def _render_tool_catalogue",
+        "title": "Render catalogue from MCP",
+        "note": [
+          "**Asks the MCP server what tools it has — real capability discovery.**",
+          "- `list_tools()` = JSON-RPC `tools/list`; the catalogue is built from the reply",
+          "- Add a tool to mcp_server.py and it appears here with no agent change"
+        ],
+        "endAnchor": "return \"\\n\\n\".join(blocks)"
+      },
+      {
+        "anchor": "You have these tools:",
+        "title": "System prompt: discovered tools",
+        "note": [
+          "**The tool list is a `<<TOOL_CATALOGUE>>` slot filled from the MCP server at runtime.**",
+          "- `list_tools()` supplies names, signatures and descriptions",
+          "- The prompt keeps only the response format and rules"
+        ],
+        "lines": 3
       }
     ],
     "labs/common/lab7_gradio_solution.txt": [
@@ -771,38 +846,6 @@
         "lines": 1
       },
       {
-        "anchor": "You are an intelligent office information assistant with memory of our",
-        "title": "System prompt: persona (memory)",
-        "note": "**Sets the role: a memory-aware office assistant using RAG, weather, and reasoning.**"
-      },
-      {
-        "anchor": "You have these tools:",
-        "title": "System prompt: tools header",
-        "note": "**Introduces the six-tool catalogue that follows.**"
-      },
-      {
-        "anchor": "search_offices(query: str)",
-        "title": "System prompt: search_offices spec",
-        "note": [
-          "**Documents search_offices and the exact office-chunk field order.**",
-          "- Name | Address | Employees | Revenue | Services — stops the model misreading fields"
-        ]
-      },
-      {
-        "anchor": "find_offices_by_service(service: str)",
-        "title": "System prompt: service tool spec",
-        "note": "**find_offices_by_service — used for 'which offices do X?' questions.**"
-      },
-      {
-        "anchor": "Lists all offices with details. No arguments needed.",
-        "title": "System prompt: routing & query types",
-        "note": [
-          "**Covers list_all_offices, geocode/weather/convert, the one-step rule, and the 5 QUERY TYPES.**",
-          "- The query-type table tells the LLM which tools to pick (weather only for type 1)"
-        ],
-        "endAnchor": "When you have gathered all information, respond with:"
-      },
-      {
         "anchor": "Final: <a helpful summary answering the user's question>",
         "title": "System prompt: Final spec",
         "note": "**The model ends with a plain-text Final: summary answering the question.**"
@@ -815,6 +858,26 @@
           "- Rule 2: don't always fetch weather — service/comparison queries skip it"
         ],
         "endAnchor": "9. Respond with ONLY ONE Thought/Action/Args per message — NEVER plan ahead"
+      },
+      {
+        "anchor": "QUERY TYPES — choose tools based on the question:",
+        "title": "System prompt: routing policy",
+        "note": [
+          "**The prompt no longer lists tools — it teaches the LLM which to pick.**",
+          "- Tool docs come from the server; routing policy stays here"
+        ],
+        "endAnchor": "5. OVERVIEW"
+      },
+      {
+        "anchor": "{\"role\": \"system\", \"content\": system + memory_cont",
+        "title": "Seed with discovered prompt + memory",
+        "note": "**Runtime-built `system` (discovered tools) plus the memory context.**",
+        "lines": 1
+      },
+      {
+        "anchor": "You are an intelligent office information assistant with memory of our",
+        "title": "System prompt: persona (memory)",
+        "note": "**Sets the role: a memory-aware office assistant using RAG, weather, and reasoning.**"
       }
     ],
     "labs/common/lab8_gradio_solution.txt": [

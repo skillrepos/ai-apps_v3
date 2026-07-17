@@ -135,19 +135,14 @@ mcp = FastMCP("WeatherServer")
 @mcp.tool
 def search_offices(query: str) -> str:
     """
-    Search the office vector database for relevant information.
-    This is the 'Retrieval' part of RAG — semantic search over
-    the office PDF data indexed in Lab 4.
+    Search the company office database for offices matching a query.
 
-    Parameters
-    ----------
-    query : str
-        Natural language search query (e.g., "HQ", "Southern office")
-
-    Returns
-    -------
-    str
-        Top matching text chunks, separated by '---'
+    Use for questions about a specific office (e.g. "HQ", "Tokyo office").
+    Returns matching rows separated by '---'. Each row lists, in order:
+      Office Name | Address | Number of Employees | Revenue (USD) | Services Offered
+    e.g. "HQ 123 Main St, New York, NY 200 15M Corporate Operations, Finance"
+    means name=HQ, address=123 Main St New York NY, 200 employees,
+    $15M revenue, services=Corporate Operations and Finance.
     """
     query_vec = embed_fn([query])[0]
     res = coll.query(
@@ -165,21 +160,14 @@ def search_offices(query: str) -> str:
 @mcp.tool
 def find_offices_by_service(service: str) -> str:
     """
-    Find offices that offer a specific service type.
+    Find every office that offers a given service type.
 
-    Searches the office database for entries matching the given service
-    (e.g., "Tech Development", "Marketing", "Customer Support").
-    Returns more results (8) than search_offices for broader coverage.
-
-    Parameters
-    ----------
-    service : str
-        Service type to search for (e.g., "Tech Development", "Sales")
-
-    Returns
-    -------
-    str
-        Matching office entries, separated by '---'
+    Use when asked "which offices do X?" or "where is Y offered?"
+    (e.g. "Tech Development", "Marketing", "Customer Support").
+    Searches more broadly than search_offices (8 results) for coverage
+    across the whole office database.
+    Returns matching rows separated by '---', same field order as
+    search_offices.
     """
     query_vec = embed_fn([f"offices offering {service}"])[0]
     res = coll.query(
@@ -197,16 +185,12 @@ def find_offices_by_service(service: str) -> str:
 @mcp.tool
 def list_all_offices() -> str:
     """
-    List all offices in the database with their basic information.
+    List every office in the database, with details. Takes no arguments.
 
-    Returns a broad set of office entries for overview or comparison
-    queries. Useful when the user asks "how many offices" or wants
-    to see all locations.
-
-    Returns
-    -------
-    str
-        All office entries, separated by '---'
+    Use for overview, counting, or broad comparison questions —
+    "how many offices are there?", "list all locations".
+    Returns up to 20 office rows separated by '---', same field order
+    as search_offices.
     """
     query_vec = embed_fn(["office location employees revenue services"])[0]
     res = coll.query(
@@ -224,30 +208,18 @@ def list_all_offices() -> str:
 @mcp.tool
 def get_weather(lat: float, lon: float) -> dict:
     """
-    Fetch **current weather** from Open-Meteo and return a concise dict.
+    Get the CURRENT weather at a latitude/longitude.
 
-    Retry policy
-    ------------
-    * Up to MAX_RETRIES total attempts with fresh connections.
-    * Retries on network errors **or** HTTP 429/5xx.
-    * Exponential back-off (1.5 s, 2.25 s, …).
-    * Each retry uses a new session to avoid connection pool issues.
-
-    Parameters
-    ----------
-    lat, lon : float
-        Geographic coordinates in decimal degrees.
-
-    Returns
-    -------
-    dict
-        {
-            "temperature": <float °C>,
-            "code":        <int WMO weathercode>,
-            "conditions":  <friendly description>,
-            "error":       <error message if request failed>
-        }
+    Use after geocode_location has turned a place name into coordinates.
+    Returns {"temperature": °C, "code": WMO weather code, "conditions":
+    plain-English description}. The temperature is CELSIUS — call
+    convert_c_to_f if you need Fahrenheit. On failure returns
+    {"error": "..."} instead of raising, so you can report or retry.
     """
+    # Implementation note (not shown to the LLM — FastMCP only publishes
+    # the docstring above): up to MAX_RETRIES attempts, a fresh session
+    # each time, retrying on network errors or HTTP 429/5xx with
+    # exponential back-off (1.5 s, 2.25 s, …).
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}&current_weather=true"
@@ -311,7 +283,13 @@ def get_weather(lat: float, lon: float) -> dict:
 
 @mcp.tool
 def convert_c_to_f(c: float) -> float:
-    """Simple Celsius → Fahrenheit conversion."""
+    """
+    Convert a Celsius temperature to Fahrenheit.
+
+    Use whenever you have a Celsius value (for example the "temperature"
+    returned by get_weather) and need to report it in °F.
+    Returns the temperature in degrees Fahrenheit.
+    """
     return c * 9 / 5 + 32
 
 
@@ -320,30 +298,17 @@ def convert_c_to_f(c: float) -> float:
 @mcp.tool
 def geocode_location(name: str) -> dict:
     """
-    Geocode a location name to latitude/longitude coordinates using Open-Meteo's geocoding API.
+    Convert a place name into geographic coordinates.
 
-    Retry policy
-    ------------
-    * Up to MAX_RETRIES total attempts with fresh connections.
-    * Retries on network errors **or** HTTP 429/5xx.
-    * Exponential back-off (1.5 s, 2.25 s, …).
-    * Each retry uses a new session to avoid connection pool issues.
-
-    Parameters
-    ----------
-    name : str
-        Location name (e.g., "San Francisco", "Paris, France", "London, UK")
-
-    Returns
-    -------
-    dict
-        {
-            "latitude": <float>,
-            "longitude": <float>,
-            "name": <matched location name>,
-            "error": <error message if request failed>
-        }
+    Use when you have a city or location name and need lat/lon before
+    calling get_weather. Pass the bare city name ("Austin", not
+    "Austin, TX") — it matches far more reliably.
+    Returns {"latitude": float, "longitude": float, "name": matched
+    location name}, or {"error": "..."} if nothing matched.
     """
+    # Implementation note (not shown to the LLM): same retry policy as
+    # get_weather — MAX_RETRIES attempts, fresh session each time,
+    # exponential back-off on network errors or HTTP 429/5xx.
     url = "https://geocoding-api.open-meteo.com/v1/search"
     last_error = None
 

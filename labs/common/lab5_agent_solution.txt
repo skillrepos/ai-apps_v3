@@ -81,29 +81,36 @@ def unwrap(obj):
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 3.  System prompt — tells the LLM about all available tools     ║
 # ╚══════════════════════════════════════════════════════════════════╝
-SYSTEM = textwrap.dedent("""
+# ─── Tool catalogue rendering (from live MCP discovery) ──────────────
+
+def _render_tool_catalogue(tools) -> str:
+    """
+    Build the tool catalogue from the MCP server's tools/list response.
+
+    This is real capability discovery — the names, signatures and
+    descriptions below come from the server at runtime. Add a tool to
+    mcp_server.py and it shows up here automatically; the agent needs
+    no changes.
+    """
+    blocks = []
+    for t in sorted(tools, key=lambda x: x.name):
+        schema = getattr(t, "inputSchema", None) or {}
+        props = schema.get("properties", {}) or {}
+        params = ", ".join(f"{n}: {p.get('type', 'any')}" for n, p in props.items())
+        desc = textwrap.dedent((t.description or "").strip())
+        blocks.append(f"{t.name}({params})\n" + textwrap.indent(desc, "    "))
+    return "\n\n".join(blocks)
+
+# ─── System prompt template — the <<TOOL_CATALOGUE>> sentinel is ─────
+# ─── filled in at runtime from what the MCP server reports.      ─────
+
+SYSTEM_TEMPLATE = textwrap.dedent("""
 You are an office information agent. You answer questions about company
 offices by searching a database and looking up live weather data.
 
 You have these tools:
 
-search_offices(query: str)
-    Searches the company office database for matching information.
-    Returns: text chunks with office names, cities, and details.
-    ALWAYS call this first to find relevant office information.
-
-geocode_location(name: str)
-    Converts a city/location name to coordinates.
-    Returns: {"latitude": float, "longitude": float, "name": str}
-
-get_weather(lat: float, lon: float)
-    Gets current weather for given coordinates.
-    Returns: {"temperature": float, "code": int, "conditions": str}
-    Note: temperature is in Celsius.
-
-convert_c_to_f(c: float)
-    Converts a Celsius temperature to Fahrenheit.
-    Returns: float
+<<TOOL_CATALOGUE>>
 
 For each step, respond with EXACTLY these three lines:
 
@@ -158,11 +165,6 @@ async def run(prompt: str, max_steps: int = 10) -> None:
     """
     llm = ChatOllama(model="llama3.2:latest", temperature=0.0)
 
-    messages = [
-        {"role": "system", "content": SYSTEM},
-        {"role": "user",   "content": prompt},
-    ]
-
     # Track gathered data for the final display
     context = {
         "office_info": None,
@@ -176,6 +178,16 @@ async def run(prompt: str, max_steps: int = 10) -> None:
     print("="*60 + "\n")
 
     async with Client(MCP_ENDPOINT) as mcp:
+        # ── Real MCP discovery: ask the server what tools it exposes ──
+        tools = await mcp.list_tools()
+        system = SYSTEM_TEMPLATE.replace("<<TOOL_CATALOGUE>>", _render_tool_catalogue(tools))
+        print(f"  (Discovered {len(tools)} tools from the MCP server)")
+
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": prompt},
+        ]
+
         for step in range(1, max_steps + 1):
             print(f"[Step {step}]")
 
