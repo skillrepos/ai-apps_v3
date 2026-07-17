@@ -29,7 +29,7 @@ The codespace is ready to use when you see a prompt like the one shown below in 
 
 **4. Set up your Groq API key (for the cloud LLM).**
 
-From Lab 6 on, the agent can run against a cloud model instead of the local Ollama one. We use **Groq** for this: its free tier is rate-limited rather than credit-limited, so it keeps working throughout the labs. (Hugging Face's Inference Providers now give a free account only about **$0.10/month** of credits — this agent makes several LLM calls per question, so that runs out after a couple of queries and returns `402 Payment Required`.)
+From Lab 6 on, the agent can run against a cloud model instead of the local Ollama one. We use **Groq** for this. Get a free Groq key by following the directions below.
 
 A. Go to [https://console.groq.com](https://console.groq.com) and sign up or log in. No credit card is required for the free tier.
 
@@ -60,13 +60,13 @@ source ~/.bashrc
 
 <br>
 
-*Note: if you skip this, the labs still work — `get_llm()` falls back to the local Ollama model, just more slowly. If you have Hugging Face PRO or pre-paid credits, `export HF_TOKEN="hf_..."` also still works.*
+*Note: if you skip this, the labs still work — `get_llm()` falls back to the local Ollama model, just more slowly. 
 
 <br>
 
 **5. Set up your HuggingFace account and token (for deploying in Lab 9).**
 
-You'll still need a Hugging Face account and token, but only to create and `git push` to your Space in Lab 9 — not for LLM calls.
+You'll also need a Hugging Face account and token for deploying to the cloud environment (e.g. Hugging Face Spaces).
 
 A. Go to [https://huggingface.co](https://huggingface.co) and log in if you already have an account. If you need to create an account, click the *Sign Up* button or visit [https://huggingface.co/join](https://huggingface.co/join)
 
