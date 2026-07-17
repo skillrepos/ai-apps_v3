@@ -544,7 +544,7 @@ code -d labs/common/lab5_agent_solution.txt rag_agent.py
 
 5. Review and merge each section. Key things to notice:
    - **Section 1 – Configuration**: just the MCP endpoint URL and regex patterns 
-   - **Section 3 – System prompt**: describes all four tools to the LLM with examples of the Thought/Action/Args format
+   - **Section 3 – System prompt**: a *template*. It supplies the Thought/Action/Args format and examples, but not the tool list — the four tools are discovered from the MCP server at runtime (`list_tools()`, as you saw in Lab 3) and dropped into the `<<TOOL_CATALOGUE>>` slot
    - **Section 4 – TAO loop**: (near last change) every tool call goes through `await mcp.call_tool(action, args)` — uniform dispatch, no special cases
 
    When finished merging, close the tab to save.
@@ -698,7 +698,7 @@ code -d labs/common/lab6_agent_solution.txt rag_agent.py
    - **Section 1** replaces the HTTP endpoint with `MCP_SERVER` — a path to `mcp_stdio_wrapper.py`. FastMCP’s Client sees a `.py` path and auto-starts it as a subprocess, talking MCP over stdin/stdout
    - **Section 4** has the async TAO loop with three guardrail checkpoints: input check before the LLM sees the prompt, tool-result check after each MCP call, and output check on the final answer
    - **Section 5** has the sync wrapper `run_agent()` that uses `asyncio.run()` so Gradio can call it easily
-   - **System prompt changes** There are also some changes to the system prompt to better accomodate the larger model we will be using on Hugging Face
+   - **System prompt changes** There are also some changes to the system prompt to better accommodate the larger cloud model we will be using (Groq) — mainly the rule to emit only ONE Thought/Action/Args per message
    - **A `memory` parameter you won't use yet** — `run_agent()` and `_run_agent_async()` take a `memory` list and return a `(response, memory)` tuple. It stays empty for now. We're threading it through early so that Lab 8 can add conversation memory by writing the *logic* only, instead of re-plumbing every function signature.
 
    When finished merging, close the tab to save.
