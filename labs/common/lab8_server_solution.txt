@@ -72,7 +72,7 @@ BACKOFF_FACTOR = 1.5     # Exponential backoff: 1.5s, 2.25s, 3.375s
 TRANSIENT_CODES = {429, 500, 502, 503, 504}  # HTTP codes worth retrying
 
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ 3.  ChromaDB setup for office RAG search                          ║
+# ║ 3.  ChromaDB setup for office RAG search (NEW in Lab 5)          ║
 # ╚══════════════════════════════════════════════════════════════════╝
 CHROMA_PATH     = Path(__file__).parent / "chroma_db"
 PDF_DIR         = Path(__file__).parent / "data"
@@ -130,7 +130,7 @@ coll = open_collection()
 # ╚══════════════════════════════════════════════════════════════════╝
 mcp = FastMCP("WeatherServer")
 
-# ─── Office Search Tool ─────────────────────────────────────────────
+# ─── Office Search Tool (NEW in Lab 5) ────────────────────────────────
 
 @mcp.tool
 def search_offices(query: str) -> str:

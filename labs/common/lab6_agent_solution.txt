@@ -156,7 +156,8 @@ RULES:
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 4.  Async TAO agent loop (starts MCP server via stdio)          ║
 # ╚══════════════════════════════════════════════════════════════════╝
-async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:
+async def _run_agent_async(prompt: str, memory: list = None,
+                           max_steps: int = 12) -> tuple:
     """
     Run the TAO agent loop with the MCP server as a subprocess.
 
@@ -164,12 +165,21 @@ async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:
     mcp_stdio_wrapper.py as a child process and talks MCP protocol
     over stdin/stdout. ALL tools go through MCP — the agent is a
     pure orchestrator.
+
+    Returns
+    -------
+    tuple of (response_text, updated_memory_list)
+
+    Note: `memory` is threaded through but not used yet — we light it
+    up in Lab 8 so we don't have to re-plumb every signature then.
     """
+    memory = list(memory) if memory else []
+
     # ── Guardrail: check user input before the LLM sees it ───────
     is_safe, prompt = check_input(prompt)
     if not is_safe:
         print(f"\n⚠️  Prompt blocked by guardrails.")
-        return prompt          # prompt now holds the refusal message
+        return prompt, memory          # prompt holds the refusal message
 
     llm = get_llm()
 
@@ -220,7 +230,7 @@ async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:
                 # ── Guardrail: sanitise output before user sees it ─
                 final = check_output(final)
                 print(f"\n{final}\n")
-                return final
+                return final, memory
 
             # ── Parse the Args ────────────────────────────────────────
             args_match = ARGS_RE.search(response)
@@ -258,25 +268,31 @@ async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:
 
             # Feed the observation back to the LLM.
             # Truncate to the first Thought/Action/Args triplet only —
-            # some models (e.g. HF Inference) plan multiple steps at once
-            # which confuses the loop if appended in full.
+            # some models plan multiple steps at once which confuses
+            # the loop if appended in full.
             first_step = response[:args_match.end()]
             messages.append({"role": "assistant", "content": first_step})
             messages.append({"role": "user",
                              "content": f"Observation: {obs_text}"})
 
-    return "Reached maximum steps without completing."
+    fallback = "Reached maximum steps without completing."
+    return fallback, memory
 
 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 5.  Synchronous wrapper (for Gradio and command-line use)       ║
 # ╚══════════════════════════════════════════════════════════════════╝
-def run_agent(prompt: str, max_steps: int = 10) -> str:
+def run_agent(prompt: str, memory: list = None,
+              max_steps: int = 12) -> tuple:
     """
     Synchronous entry point that Gradio and the command line use.
     Wraps the async agent loop with asyncio.run().
+
+    Returns
+    -------
+    tuple of (response_text, updated_memory_list)
     """
-    return asyncio.run(_run_agent_async(prompt, max_steps))
+    return asyncio.run(_run_agent_async(prompt, memory, max_steps))
 
 
 # ╔══════════════════════════════════════════════════════════════════╗
@@ -289,11 +305,12 @@ if __name__ == "__main__":
     print("\nAsk about any office (e.g. 'Tell me about HQ')")
     print("Type 'exit' to quit\n")
 
+    memory = []
     while True:
         prompt = input("User: ").strip()
         if prompt.lower() == "exit":
             print("Goodbye!")
             break
         if prompt:
-            run_agent(prompt)
+            result, memory = run_agent(prompt, memory=memory)
             print()

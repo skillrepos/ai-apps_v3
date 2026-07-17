@@ -85,7 +85,10 @@ cat > "$OUTPUT_DIR/requirements.txt" << 'EOF'
 # Hugging Face Spaces requirements for AI Office Assistant
 # Note: gradio is pre-installed on HF Spaces with Gradio SDK
 
-# HuggingFace Hub for Inference API
+# Groq is OpenAI-compatible — the openai SDK is our cloud LLM client
+openai>=1.60.0
+
+# HuggingFace Hub (fallback LLM backend via Inference Providers)
 huggingface_hub>=0.20.0
 
 # Vector database for RAG
@@ -126,21 +129,27 @@ license: mit
 An AI-powered office information agent built with:
 - **Gradio** for the web interface
 - **ChromaDB** for vector-based document search (RAG)
-- **HuggingFace Inference API** for LLM responses
+- **Groq** for LLM responses (free tier, OpenAI-compatible API)
 - **Open-Meteo API** for live weather data
 
 ## IMPORTANT: Required Setup
 
-**This Space requires `HF_TOKEN` to be set as a secret!**
+**This Space requires `GROQ_API_KEY` to be set as a secret!**
 
-Without `HF_TOKEN`, the LLM will not work.
+Without `GROQ_API_KEY`, the LLM will not work.
 
 **How to set it up:**
-1. Go to your Space's **Settings** page
-2. Scroll to **Variables and secrets**
-3. Click **New secret**
-4. Name: `HF_TOKEN` / Value: Your HuggingFace API token
-5. Click **Save** — the Space will restart automatically
+1. Get a free API key at [https://console.groq.com/keys](https://console.groq.com/keys) (no credit card needed)
+2. Go to your Space's **Settings** page
+3. Scroll to **Variables and secrets**
+4. Click **New secret**
+5. Name: `GROQ_API_KEY` / Value: Your Groq API key
+6. Click **Save** — the Space will restart automatically
+
+> Note: do **not** set `HF_TOKEN` as a secret here. A free Hugging Face account
+> only gets ~$0.10/month of Inference Provider credits, which this agent
+> exhausts after a couple of queries (`402 Payment Required`). Your HF token is
+> only needed to `git push` to this Space, not to run it.
 
 ## Features
 
@@ -189,5 +198,5 @@ echo "Files in $OUTPUT_DIR:"
 echo ""
 ls -la "$OUTPUT_DIR"
 echo ""
-echo -e "${YELLOW}REMINDER: Make sure HF_TOKEN is set as a secret in your Space!${NC}"
+echo -e "${YELLOW}REMINDER: Make sure GROQ_API_KEY is set as a secret in your Space!${NC}"
 echo ""

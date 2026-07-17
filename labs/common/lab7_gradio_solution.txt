@@ -69,7 +69,7 @@ CUSTOM_CSS = """
 # ║ 2.  Chat handler — bridges the UI to the agent                  ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
-def chat_handler(message: str, history: list) -> tuple:
+def chat_handler(message: str, history: list, memory: list) -> tuple:
     """
     Process a user message through the agent and update chat history.
 
@@ -79,14 +79,20 @@ def chat_handler(message: str, history: list) -> tuple:
         The user's input text
     history : list
         Gradio Chatbot history (list of {"role": ..., "content": ...} dicts)
+    memory : list
+        Conversation memory — list of (question, answer) tuples
 
     Returns
     -------
-    tuple of (history, "")
-        Updated history and empty string to clear the input box
+    tuple of (history, "", memory)
+        Updated history, empty string to clear the input box, and the
+        updated memory.
+
+    Note: memory is threaded through but stays empty until Lab 8 —
+    wiring it now means Lab 8 only has to add the logic, not re-plumb.
     """
     if not message.strip():
-        return history, ""
+        return history, "", memory
 
     # Add user message to history
     history = history + [{"role": "user", "content": message}]
@@ -95,17 +101,17 @@ def chat_handler(message: str, history: list) -> tuple:
         history = history + [{"role": "assistant",
                               "content": "[Demo Mode] Agent not available. "
                                          "Please ensure rag_agent.py is complete."}]
-        return history, ""
+        return history, "", memory
 
     # Run the agent and get the response
     try:
-        result = run_agent(message)
+        result, memory = run_agent(message, memory=memory)
         history = history + [{"role": "assistant", "content": result}]
     except Exception as e:
         history = history + [{"role": "assistant",
                               "content": f"Error processing query: {e}"}]
 
-    return history, ""
+    return history, "", memory
 
 
 # ╔══════════════════════════════════════════════════════════════════╗
@@ -115,6 +121,9 @@ def chat_handler(message: str, history: list) -> tuple:
 with gr.Blocks(
     title="AI Office Assistant",
 ) as demo:
+
+    # ── Persistent memory state (survives across queries) ────────
+    memory_state = gr.State(value=[])
 
     # ── Header ─────────────────────────────────────────────────────
     gr.HTML("""
@@ -160,11 +169,11 @@ with gr.Blocks(
         with gr.Column(scale=1):
             gr.Markdown("### Company Offices")
             gr.HTML("""
-            <div class="office-card"><strong>HQ</strong> — New York, NY<br>150 employees · $85.5M revenue</div>
-            <div class="office-card"><strong>West Coast</strong> — San Francisco, CA<br>95 employees · $78.9M revenue</div>
-            <div class="office-card"><strong>Southern</strong> — Austin, TX<br>80 employees · $52.3M revenue</div>
-            <div class="office-card"><strong>Midwest</strong> — Chicago, IL<br>120 employees · $67.2M revenue</div>
-            <div class="office-card"><strong>Southeast</strong> — Atlanta, GA<br>75 employees · $48.7M revenue</div>
+            <div class="office-card"><strong>HQ</strong> — New York, NY<br>200 employees · $15M revenue</div>
+            <div class="office-card"><strong>West Coast Hub</strong> — San Francisco, CA<br>150 employees · $12M revenue</div>
+            <div class="office-card"><strong>Southern</strong> — Austin, TX<br>80 employees · $5M revenue</div>
+            <div class="office-card"><strong>Midwest</strong> — Chicago, IL<br>100 employees · $8M revenue</div>
+            <div class="office-card"><strong>+ 16 more worldwide</strong></div>
             """)
 
             gr.Markdown("### How It Works")
@@ -182,17 +191,17 @@ with gr.Blocks(
     # Send button and Enter key both trigger chat_handler
     send_btn.click(
         chat_handler,
-        inputs=[msg, chatbot],
-        outputs=[chatbot, msg],
+        inputs=[msg, chatbot, memory_state],
+        outputs=[chatbot, msg, memory_state],
     )
     msg.submit(
         chat_handler,
-        inputs=[msg, chatbot],
-        outputs=[chatbot, msg],
+        inputs=[msg, chatbot, memory_state],
+        outputs=[chatbot, msg, memory_state],
     )
 
-    # Clear button resets the chat
-    clear_btn.click(lambda: ([], ""), outputs=[chatbot, msg])
+    # Clear button resets the chat (and memory)
+    clear_btn.click(lambda: ([], "", []), outputs=[chatbot, msg, memory_state])
 
     # Example buttons populate the input box
     ex1.click(lambda: "Tell me about HQ", outputs=[msg])

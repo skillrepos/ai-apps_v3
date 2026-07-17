@@ -27,9 +27,46 @@ The codespace is ready to use when you see a prompt like the one shown below in 
 
 ![Ready to use](./images/31ai3.png?raw=true "Ready to use")
 
-**4. Set up your HuggingFace API token.**
+**4. Set up your Groq API key (for the cloud LLM).**
 
-The RAG agent uses HuggingFace's Inference API to generate LLM responses. You'll need a free API token:
+From Lab 6 on, the agent can run against a cloud model instead of the local Ollama one. We use **Groq** for this: its free tier is rate-limited rather than credit-limited, so it keeps working throughout the labs. (Hugging Face's Inference Providers now give a free account only about **$0.10/month** of credits — this agent makes several LLM calls per question, so that runs out after a couple of queries and returns `402 Payment Required`.)
+
+A. Go to [https://console.groq.com](https://console.groq.com) and sign up or log in. No credit card is required for the free tier.
+
+<br>
+
+B. Navigate to [https://console.groq.com/keys](https://console.groq.com/keys) and click *Create API Key*.
+
+<br>
+
+C. Give it a name, create it, and copy the key value. Save it somewhere — you won't be able to view it again.
+
+<br>
+
+D. For all runs of agents in the labs, make sure the key is set in your terminal before running the agent:
+
+```bash
+export GROQ_API_KEY="your_groq_key_here"
+```
+
+<br>
+
+E. Alternatively, to make this permanent for your codespace session, add it to your shell profile:
+
+```bash
+echo 'export GROQ_API_KEY="your_groq_key_here"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+<br>
+
+*Note: if you skip this, the labs still work — `get_llm()` falls back to the local Ollama model, just more slowly. If you have Hugging Face PRO or pre-paid credits, `export HF_TOKEN="hf_..."` also still works.*
+
+<br>
+
+**5. Set up your HuggingFace account and token (for deploying in Lab 9).**
+
+You'll still need a Hugging Face account and token, but only to create and `git push` to your Space in Lab 9 — not for LLM calls.
 
 A. Go to [https://huggingface.co](https://huggingface.co) and log in if you already have an account. If you need to create an account, click the *Sign Up* button or visit [https://huggingface.co/join](https://huggingface.co/join)
 
@@ -37,7 +74,7 @@ A. Go to [https://huggingface.co](https://huggingface.co) and log in if you alre
 
 <br>
    
-B. Navigate to (https://huggingface.co/settings/tokens)[https://huggingface.co/settings/tokens].  Click on *+ Create new token*.
+B. Navigate to [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).  Click on *+ Create new token*.
 
 ![Get token](./images/aia-3-20.png?raw=true "Get token")
 
@@ -49,30 +86,13 @@ C. Select **Write** for the token type and provide a name.
 
 <br>
    
-D. Click on the *Create token* button and copy the token (it starts with `hf_`). Save it somewhere.
+D. Click on the *Create token* button and copy the token (it starts with `hf_`). Save it somewhere — you'll paste it as the password when you `git push` in Lab 9.
 
 ![Save/copy token](./images/ae81.png?raw=true "Save/copy token")
 
-<br>
-
-E. For all runs of agents in the labs, make sure the token is set in your terminal before running the agent:
-
-```bash
-export HF_TOKEN="hf_your_token_here"
-```
-
-<br>
-
-F. Alternatively, to make this permanent for your codespace session, add it to your shell profile:
-
-```bash
-echo 'export HF_TOKEN="hf_your_token_here"' >> ~/.bashrc
-source ~/.bashrc
-```
-
 <br><br>
 
-**5. Open up the *labs.md* file so you can follow along with the labs.**
+**6. Open up the *labs.md* file so you can follow along with the labs.**
 You can either open it in a separate browser instance or open it in the codespace. 
 
 ![Opening labs](./images/v3appb29.png?raw=true "Opening labs")

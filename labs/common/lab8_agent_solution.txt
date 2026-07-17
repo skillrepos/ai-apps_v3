@@ -46,11 +46,13 @@ from guardrails import check_input, check_tool_result, check_output
 # ║ 1.  Configuration                                               ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
-# Regex for parsing LLM responses (same pattern as earlier labs)
+# Regex for parsing LLM responses (same pattern as Labs 2 and 3)
 ACTION_RE = re.compile(r"Action:\s*(\w+)", re.IGNORECASE)
 ARGS_RE   = re.compile(r"Args:\s*(\{.*?\})(?:\s|$)", re.S | re.IGNORECASE)
 
-# MCP server subprocess — starts mcp_server.py via stdio
+# MCP server subprocess — starts mcp_server.py via stdio instead of
+# connecting over HTTP. FastMCP's Client sees a .py path and auto-
+# starts it as a child process, talking MCP over stdin/stdout.
 MCP_SERVER = str(Path(__file__).parent / "mcp_stdio_wrapper.py")
 
 # Maximum conversation exchanges to keep in memory
@@ -113,16 +115,16 @@ list_all_offices()
     Use for overview, counting, or broad comparison questions.
 
 geocode_location(name: str)
-    Converts a city name to coordinates.
+    Converts a city/location name to coordinates.
     Returns: {"latitude": float, "longitude": float, "name": str}
 
 get_weather(lat: float, lon: float)
     Gets current weather for given coordinates.
     Returns: {"temperature": float, "code": int, "conditions": str}
-    Temperature is in Celsius.
+    Note: temperature is in Celsius.
 
 convert_c_to_f(c: float)
-    Converts Celsius to Fahrenheit.
+    Converts a Celsius temperature to Fahrenheit.
     Returns: float
 
 IMPORTANT: Respond with EXACTLY ONE step at a time — a single
@@ -159,7 +161,7 @@ Action: DONE
 Args: {}
 Final: <a helpful summary answering the user's question>
 
-Do NOT put arguments on the Action line. Arguments go ONLY in Args as JSON.
+Do NOT put arguments on the Action line. Arguments go ONLY in the Args line as JSON.
 
 RULES:
 1. Use conversation history to understand follow-up questions and pronouns

@@ -404,7 +404,7 @@
         "endAnchor": "mcp_stdio_wrapper.py\")"
       },
       {
-        "anchor": "async def _run_agent_async(prompt: str, max_steps: int = 10) -> str:",
+        "anchor": "async def _run_agent_async(prompt: str, memory: list = None,",
         "title": "Deployable agent entry",
         "note": "**Async agent that embeds the MCP server via stdio instead of HTTP.**"
       },
@@ -464,7 +464,7 @@
         "endAnchor": "messages.append({\"role\": \"assistant\", \"content\": first_step})"
       },
       {
-        "anchor": "return \"Reached maximum steps without completing.\"",
+        "anchor": "fallback = \"Reached maximum steps without completing.\"",
         "title": "Max-steps fallback",
         "note": "**Safety exit if the agent never emits done within max_steps.**"
       },
@@ -481,7 +481,7 @@
         "endAnchor": "print(\"=\" * 60)"
       },
       {
-        "anchor": "run_agent(prompt)",
+        "anchor": "result, memory = run_agent(prompt, memory=memory)",
         "title": "Run one query",
         "note": "**Calls the agent for each line the user types in the REPL.**",
         "lines": 1
@@ -514,11 +514,26 @@
           "- Rule 9 is what keeps the larger HF model in step"
         ],
         "endAnchor": "9. Respond with ONLY ONE Thought/Action/Args per message — NEVER plan ahead"
+      },
+      {
+        "anchor": "memory = []",
+        "title": "Memory seam (unused until Lab 8)",
+        "note": [
+          "**Starts an empty memory list that's threaded through run_agent but stays empty here.**",
+          "- Wired early so Lab 8 adds only the logic, not new signatures"
+        ],
+        "lines": 1
+      },
+      {
+        "anchor": "result, memory = run_agent(prompt, memory=memory)",
+        "title": "Memory seam: pass & capture",
+        "note": "**Passes memory in and captures it back — inert in Lab 6, live in Lab 8.**",
+        "lines": 1
       }
     ],
     "labs/common/lab7_gradio_solution.txt": [
       {
-        "anchor": "def chat_handler(message: str, history: list) -> tuple:",
+        "anchor": "def chat_handler(message: str, history: list, memory: list) -> tuple:",
         "title": "Chat handler",
         "note": [
           "**Runs a user message through run_agent() and appends the reply to history.**",
@@ -537,6 +552,14 @@
         "title": "Wire up events",
         "note": "**Connects Send/Enter to chat_handler and the example buttons to the input box.**",
         "endAnchor": "West Coast office"
+      },
+      {
+        "anchor": "# ── Persistent memory state (survives across queries) ────────",
+        "title": "Gradio memory seam",
+        "note": [
+          "**gr.State that will hold conversation memory per browser session.**",
+          "- Empty until Lab 8 — the seam is here so Lab 8 only adds logic"
+        ]
       }
     ],
     "labs/common/lab8_server_solution.txt": [
@@ -633,7 +656,7 @@
         ]
       },
       {
-        "anchor": "# Regex for parsing LLM responses (same pattern as earlier labs)",
+        "anchor": "# Regex for parsing LLM responses (same pattern as Labs 2 and 3)",
         "title": "Parsers + memory cap",
         "note": "**Keeps the Action/Args regexes and adds MAX_MEMORY = 5 (exchanges to remember).**",
         "endAnchor": "MAX_MEMORY = 5"
@@ -785,7 +808,7 @@
         "note": "**The model ends with a plain-text Final: summary answering the question.**"
       },
       {
-        "anchor": "Do NOT put arguments on the Action line. Arguments go ONLY in Args as JSON.",
+        "anchor": "Do NOT put arguments on the Action line. Arguments go ONLY in the Args line as JSON.",
         "title": "System prompt: RULES (conversational)",
         "note": [
           "**Rules for the memory agent: use history for follow-ups, pick tools by query type.**",

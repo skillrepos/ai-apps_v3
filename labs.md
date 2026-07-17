@@ -391,7 +391,7 @@ What is the weather in New York?
 
 ### Steps
 
-1. For this lab and the next one, we have a data file that we'll be usihg that contains a list of office information and details for a ficticious company. The file is in [**data/offices.pdf**](./data/offices.pdf). You can use the link to open it and take a look at it.
+1. For this lab and the next one, we have a data file that we'll be using that contains a list of office information and details for a fictitious company. The file is in [**data/offices.pdf**](./data/offices.pdf). You can use the link to open it and take a look at it.
 
 ![PDF data file](./images/31ai23.png?raw=true "PDF data file") 
 
@@ -406,7 +406,7 @@ code tools/index_pdf.py
 
 <br><br>
 
-3. Let's create a vector database of our local python files. Run the program to index those as below. You'll see the program loading Chroma's built-in embedding model that will turn the code chunks into numeric represenations in the vector database and then it will read and index our *.py files. **When you run the command below, there may be a pause while things get loaded.**
+3. Let's create a vector database of our local python files. Run the program to index those as below. You'll see the program loading Chroma's built-in embedding model that will turn the code chunks into numeric representations in the vector database and then it will read and index our *.py files. **When you run the command below, there may be a pause while things get loaded.**
 
 ```
 python tools/index_code.py
@@ -622,8 +622,9 @@ Tell me about the Southern office
 
 **What the deployable agent does**
 - Introduces an **LLM provider** layer (`llm_provider.py`) that automatically selects the right backend:
-  - **Ollama** when running locally (Codespaces / laptop)
-  - **HuggingFace Inference API** when deployed to HF Spaces (uses `HF_TOKEN`)
+  - **Groq** when a `GROQ_API_KEY` is set (cloud — free tier, fast; used for HF Spaces)
+  - **HuggingFace Inference Providers** when only `HF_TOKEN` is set (cloud — uses metered credits)
+  - **Ollama** when neither is set (Codespaces / laptop)
 - Adds a **guardrails** module (`guardrails.py`) with regex-based prompt-injection detection at three boundaries: user input, tool results, and final output.
 - Evolves `rag_agent.py` into a **deployable agent** that starts the MCP server as a subprocess via stdio transport, uses the provider abstraction, and wires in guardrails at every boundary.
 
@@ -641,13 +642,14 @@ Tell me about the Southern office
 code llm_provider.py
 ```
 
-   - **Section 2 – HFResponse**: wraps HF API responses to look like LangChain responses (same `.content` attribute)
-   - **Section 3 – HFLLMWrapper**: creates a HuggingFace `InferenceClient` and provides the same `.invoke(messages)` interface as ChatOllama
-   - **Section 4 – get_llm()**: checks for `HF_TOKEN` in the environment — if found, returns the HF wrapper; otherwise returns ChatOllama
+   - **Section 2 – LLMResponse**: wraps cloud API responses to look like LangChain responses (same `.content` attribute)
+   - **Section 3 – GroqLLMWrapper**: points the OpenAI SDK at Groq's OpenAI-compatible endpoint and provides the same `.invoke(messages)` interface as ChatOllama
+   - **Section 4 – HFLLMWrapper**: the same interface backed by a HuggingFace `InferenceClient` (fallback)
+   - **Section 5 – get_llm()**: checks the environment in order — `GROQ_API_KEY` → Groq, else `HF_TOKEN` → HuggingFace, else ChatOllama
 
 <br><br>
 
-2. This is the key piece that lets our app run with either Ollama (local) or HuggingFace (cloud) without changing any other code. Test it now:
+2. This is the key piece that lets our app run with either Ollama (local) or a cloud model (Groq / HuggingFace) without changing any other code. Test it now:
 
 ```
 python llm_provider.py
@@ -655,7 +657,9 @@ python llm_provider.py
 
 ![Testing the LLM provider wrapper](./images/v3appb14.png?raw=true "Testing the LLM provider wrapper")
 
-You should see “LLM Provider: Ollama (local)” — this confirms that `get_llm()` detected no `HF_TOKEN` in the environment and automatically chose the local Ollama backend. It then sends a quick test message and prints the model’s response. When we deploy to HF Spaces later, the same code will print “HuggingFace Inference API” instead because `HF_TOKEN` will be set as a secret there.
+You should see “LLM Provider: Ollama (local)” — this confirms that `get_llm()` found neither `GROQ_API_KEY` nor `HF_TOKEN` in the environment and automatically chose the local Ollama backend. It then sends a quick test message and prints the model’s response. In the next lab we’ll set `GROQ_API_KEY`, and the same code will print “LLM Provider: Groq (cloud)” instead — and it will print that on Hugging Face Spaces too, because we’ll set `GROQ_API_KEY` as a secret there.
+
+**Why Groq for the cloud model?** Hugging Face replaced its old free serverless Inference API with metered *Inference Providers*: a free HF account now gets only about **$0.10/month** of credits. This agent makes several LLM calls per question (one per TAO step, each resending the whole system prompt), so those credits run out after a couple of queries and you get `402 Client Error: Payment Required`. Groq’s free tier is **rate**-limited instead of credit-limited, so it recovers on its own and is a better fit for the labs. The HuggingFace path still works if you have PRO or pre-paid credits.
 
 <br><br>
 
@@ -693,6 +697,7 @@ code -d labs/common/lab6_agent_solution.txt rag_agent.py
    - **Section 4** has the async TAO loop with three guardrail checkpoints: input check before the LLM sees the prompt, tool-result check after each MCP call, and output check on the final answer
    - **Section 5** has the sync wrapper `run_agent()` that uses `asyncio.run()` so Gradio can call it easily
    - **System prompt changes** There are also some changes to the system prompt to better accomodate the larger model we will be using on Hugging Face
+   - **A `memory` parameter you won't use yet** — `run_agent()` and `_run_agent_async()` take a `memory` list and return a `(response, memory)` tuple. It stays empty for now. We're threading it through early so that Lab 8 can add conversation memory by writing the *logic* only, instead of re-plumbing every function signature.
 
    When finished merging, close the tab to save.
 
@@ -791,16 +796,19 @@ code -d labs/common/lab7_gradio_solution.txt gradio_app.py
    - **Section 2** has the `chat_handler()` function — it takes a user message, calls `run_agent()` from `rag_agent.py`, and returns the updated conversation history
    - **Section 3** has the Gradio layout — a `gr.Chatbot` for the conversation, a `gr.Textbox` for input, Send/Clear buttons, and example query buttons
    - **Section 4** has the event handlers — `.click()` and `.submit()` connect the UI components to `chat_handler()`
+   - **A `memory_state` you won't use yet** — `memory_state = gr.State(value=[])` is wired through the handlers but stays empty. As with the agent in Lab 6, we're putting the seam in early so Lab 8 only has to add the memory logic and the sidebar indicator.
 
    When finished merging, close the tab to save.
 
 <br><br>
 
-3. Now, set the environment variable for your Hugging Face token (replacing "your-token-value" with your actual token value) so we can use the larger model. 
+3. Now, set the environment variable for your Groq API key (replacing "your-key-value" with your actual key from the README setup step) so we can use the larger cloud model. 
 
 ```
-export HF_TOKEN=your-token-value
+export GROQ_API_KEY=your-key-value
 ```
+
+(If you'd rather stay on the local Ollama model, you can skip this step — the app works either way, just more slowly. If you have Hugging Face PRO or pre-paid credits, `export HF_TOKEN=...` also still works.)
 
 4. Now run the gradio app.
 
@@ -875,78 +883,31 @@ Tell me about HQ
 
 ### Steps
 
-1. In this lab, we'll add three major capabilities in one pass: conversation memory in the agent, new tools on the MCP server, and memory-aware UI in Gradio. Let's start by adding the new MCP tools. Open the diff view for the server:
+**How this lab works.** Lab 8 changes a lot of code — far more than is useful to merge block by block, and most of it is plumbing rather than ideas. So we'll do it differently: **apply the finished code, run it, watch the new behavior, and then look at the handful of changes that actually create that behavior.** The interesting part of this lab is what the agent *does*, not the clicking.
+
+1. Apply the Lab 8 code. These three commands replace the server, agent, and UI with their Lab 8 versions:
 
 ```
-code -d labs/common/lab8_server_solution.txt mcp_server.py
+cp labs/common/lab8_server_solution.txt mcp_server.py
+cp labs/common/lab8_agent_solution.txt rag_agent.py
+cp labs/common/lab8_gradio_solution.txt gradio_app.py
 ```
 
-![Merging enhancements](./images/v3appb18.png?raw=true "Merging enhancements")
+Nothing else changes — the guardrails and LLM provider layer from Lab 6 stay exactly as they are.
 
 <br><br>
 
-2. Review and merge the changes. The key additions to notice:
-   - **`find_offices_by_service(service)`** — a new `@mcp.tool` that searches the vector DB with a service-focused query (e.g., "Tech Development") and returns up to 8 results for broader coverage
-   - **`list_all_offices()`** — a new `@mcp.tool` that returns up to 20 results for overview/comparison queries
-   - Both tools use the same ChromaDB collection as `search_offices` but with different query strategies and result counts
-   - All existing tools remain unchanged
-
-   When finished merging, close the tab to save.
-
-
-<br><br>
-
-3. Now let's add conversation memory and smarter query handling to the agent. Open the diff view:
-
-```
-code -d labs/common/lab8_agent_solution.txt rag_agent.py
-```
-
-![Merging agent enhancements](./images/v3appb19.png?raw=true "Merging agent enhancements")
-
-<br><br>
-
-4. Review and merge each section. This is the most important set of changes — take time to understand them:
-   - **Section 1 — Configuration**: Adds `MAX_MEMORY = 5` — the agent keeps the last 5 exchanges in memory
-   - **Section 3 — System prompt**: Substantially enhanced — now describes all 6 tools and teaches the LLM to handle 5 query types (office+weather, service queries, comparisons, follow-ups, and overviews). The key rule: "Choose the RIGHT tools for the query type — do NOT always get weather"
-   - **Section 4 — Async TAO loop**: Now accepts a `memory` parameter. Before the TAO loop starts, it builds a `memory_context` string from previous exchanges and appends it to the system prompt. After the loop completes, the new Q&A pair is appended to memory. Returns `(result, memory)` tuple
-   - **Section 5 — Sync wrapper**: Updated signature — `run_agent(prompt, memory=None)` now returns `(result, memory)` tuple
-   - **Section 6 — Interactive loop**: Maintains a `memory = []` list across the while loop. Adds `memory` and `clear` commands for inspecting/resetting conversation history
-
-   When finished merging, close the tab to save.
-
-<br><br>
-
-5. Now let's update the Gradio interface to support memory. Open the diff view:
-
-```
-code -d labs/common/lab8_gradio_solution.txt gradio_app.py
-```
-
-![Merging Gradio interface enhancements](./images/v3appb20.png?raw=true "Merging Gradio interface enhancements")
-
-<br><br>
-
-6. Review and merge each section. Key things to notice:
-   - **Section 2 — chat_handler**: Now accepts a `memory` parameter, passes it to `run_agent()`, receives updated memory back, and returns a memory HTML indicator for the sidebar
-   - **Section 3 — Layout**: Adds `memory_state = gr.State(value=[])` for persistent memory, a `memory_display` HTML component in the sidebar, and four example query buttons (including follow-up and service queries)
-   - **Section 4 — Event handlers**: All wired with `memory_state` in inputs/outputs. Clear button now resets both chat history AND memory. The `_memory_html()` helper generates the sidebar memory indicator
-
-   When finished merging, close the tab to save.
-
-<br><br>
-
-7. Now let's run the conversational app:(Make sure you're running this in a terminal where the HF_TOKEN environment variable is set.)
+2. Now let's run the conversational app. (Make sure you're running this in a terminal where the GROQ_API_KEY environment variable is set — see Lab 7, step 3.)
 
 ```
 python gradio_app.py
 ```
 
-Open the app as before (via the popup or the PORTS tab, port 7860). 
+Open the app as before (via the popup or the PORTS tab, port 7860).
 
 <br><br>
 
-8. Start with a basic office query to establish context:
+3. Start with a basic office query to establish context:
 
 ```
 Tell me about HQ
@@ -958,7 +919,7 @@ You should see the familiar response with the location, weather, and an informat
 
 <br><br>
 
-9. Now test the agent's memory with a **follow-up question**. Without mentioning "HQ" again, ask:
+4. **This is the moment that matters.** Test the agent's memory with a **follow-up question**. Without mentioning "HQ" again, ask:
 
 ```
 What services do they offer?
@@ -970,7 +931,7 @@ The agent should use conversation memory to understand that "they" refers to HQ,
 
 <br><br>
 
-10. Try a **service-based query** — a completely different query type:
+5. Try a **service-based query** — a completely different query type:
 
 ```
 Which offices do Tech Development?
@@ -982,7 +943,7 @@ Back in the terminal of the Codespace, you can watch the TAO loop. This time, th
 
 <br><br>
 
-11. Try a **comparison query**:
+6. Try a **comparison query**:
 
 ```
 Compare the Tokyo and London offices
@@ -996,7 +957,7 @@ The agent should call `search_offices` twice (once for each office) and compose 
 
 <br><br>
 
-12. Experiment with your own follow-up questions! Some ideas to try:
+7. Experiment with your own follow-up questions! Some ideas to try:
     - "Which one has more employees?" (uses memory of the comparison)
     - "Tell me about the Dubai office" then "What's the weather like there?" (two-step follow-up)
     - "How many offices do we have?" (triggers `list_all_offices`)
@@ -1004,6 +965,73 @@ The agent should call `search_offices` twice (once for each office) and compose 
     Notice how the memory indicator in the sidebar tracks your conversation history. Each query builds on the last, and the agent decides which tools to use based on what you're asking — not a fixed sequence. That's what makes it a real conversational agent.
 
     When done, stop the Gradio app with Ctrl-C in the terminal.
+
+<br><br>
+
+---
+
+### Now let's see what made that work
+
+Four changes produced everything you just saw. For each one below we open a **side-by-side view of the Lab 8 file against the version you already had**. **You do NOT need to merge anything** — the code is already applied. Just read. If you have the *Merge Info* extension installed, **hover over any highlighted block for an explanation of what it does**.
+
+<br>
+
+8. **The two new MCP tools.** Open:
+
+```
+code -d labs/common/lab8_server_solution.txt labs/common/lab5_server_solution.txt
+```
+
+The left side is the Lab 8 server; the right is the version you built in Lab 5. What's new:
+   - **`find_offices_by_service(service)`** — a new `@mcp.tool` that searches the vector DB with a service-focused query (e.g. "Tech Development") and returns up to 8 results for broader coverage
+   - **`list_all_offices()`** — a new `@mcp.tool` that returns up to 20 results for overview/comparison queries
+   - Both use the same ChromaDB collection as `search_offices`, just with different query strategies and result counts. Every existing tool is unchanged.
+
+   More tools means the LLM now has to *choose* — which is what made steps 5 and 6 behave differently.
+
+<br><br>
+
+9. **Conversation memory — the ~10 lines that matter.** Open:
+
+```
+code -d labs/common/lab8_agent_solution.txt labs/common/lab6_agent_solution.txt
+```
+
+Ignore the file header and docstrings and look for these four things:
+   - **`MAX_MEMORY = 5`** — how many exchanges we keep
+   - **"Build memory context for the system prompt"** — the short loop that turns the last few (question, answer) pairs into a plain-text block
+   - **`{"role": "system", "content": SYSTEM + memory_context}`** — the whole trick. Memory is just *text appended to the system prompt*. There is no magic.
+   - **`memory.append((prompt, final))`** — remember this exchange for next time
+
+   That's the entire memory feature. It's why "they" resolved to HQ in step 4.
+
+   *(You may notice the `memory` parameter already existed on these functions back in Lab 6 — we threaded it through early, unused, so that this lab could add the logic without re-plumbing every signature.)*
+
+<br><br>
+
+10. **The system prompt — teaching the LLM to route.** In the same diff view, look at **Section 3**. The prompt now describes all 6 tools and spells out five **QUERY TYPES**:
+
+   | Query type | Example | Tools the LLM should pick |
+   |---|---|---|
+   | Office + weather | "Tell me about HQ" | search → geocode → weather → convert |
+   | Service query | "Which offices do Tech Development?" | find_offices_by_service (no weather) |
+   | Comparison | "Compare Tokyo and London" | search_offices twice |
+   | Follow-up | "What services do they offer?" | use history, then search_offices |
+   | Overview | "How many offices?" | list_all_offices |
+
+   The key rule is *"Choose the RIGHT tools for the query type — do NOT always get weather."* This prompt text is what turned a fixed pipeline into an agent that decides.
+
+<br><br>
+
+11. **The Gradio memory state and indicator.** Open:
+
+```
+code -d labs/common/lab8_gradio_solution.txt labs/common/lab7_gradio_solution.txt
+```
+
+   - **`memory_state = gr.State(value=[])`** — `gr.State` persists the memory list across queries *within one browser session* (so two users don't share memory)
+   - **`_memory_html()`** and the `memory_display` component — the sidebar indicator you watched update
+   - The event handlers now pass `memory_state` in and out, and **Clear** resets both the chat and the memory
 
 <p align="center">
 **[END OF LAB]**
@@ -1016,7 +1044,9 @@ The agent should call `search_offices` twice (once for each office) and compose 
 
 **Purpose: Deploying the full app into a Hugging Face Space.**
 
-1. You will need the Hugging Face userid and token value that you created in the README at the beginning of the labs. Make sure you have those handy.
+1. You will need two things from the README setup at the beginning of the labs — make sure you have both handy:
+   - Your **Hugging Face userid and token** — used to authenticate the `git push` that deploys your code to the Space (step 10).
+   - Your **Groq API key** — set as a Space *secret* so the deployed app can call the LLM (step 6).
 
 <br><br>
 
@@ -1032,7 +1062,7 @@ The agent should call `search_offices` twice (once for each office) and compose 
 
 <br><br>
 
-4. On the next page, we need to setup a secret with our HF token. Click on the *Settings* link on the top right.
+4. On the next page, we need to setup a secret with our Groq API key — this is what the deployed app will use for its LLM calls. (Your Hugging Face token is still needed, but for a different job: authenticating the `git push` in step 10.) Click on the *Settings* link on the top right.
 
 ![Settings](./images/aia-3-51.png?raw=true "Settings")
 
@@ -1044,7 +1074,9 @@ The agent should call `search_offices` twice (once for each office) and compose 
 
 <br><br>
 
-6. In the dialog, set the Name to **HF_TOKEN**, add a description if you'd like, and paste your actual Hugging Face token value, then click *Save*.
+6. In the dialog, set the Name to **GROQ_API_KEY**, add a description if you'd like, and paste your actual Groq API key value, then click *Save*.
+
+(The app's `get_llm()` checks `GROQ_API_KEY` first, so this is all the Space needs to use the cloud model. Don't set `HF_TOKEN` as a Space secret — on a free HF account it only has ~$0.10/month of Inference Provider credits and the app would fail with a 402 after a couple of queries.)
 
 ![Secret values](./images/v2app33.png?raw=true "Secret values")
 
