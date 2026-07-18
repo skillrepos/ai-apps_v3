@@ -104,11 +104,11 @@ with gr.Blocks(
         with gr.Column(scale=1):
             gr.Markdown("### Company Offices")
             gr.HTML("""
-            <div class="office-card"><strong>HQ</strong> — New York, NY<br>150 employees · $85.5M revenue</div>
-            <div class="office-card"><strong>West Coast</strong> — San Francisco, CA<br>95 employees · $78.9M revenue</div>
-            <div class="office-card"><strong>Southern</strong> — Austin, TX<br>80 employees · $52.3M revenue</div>
-            <div class="office-card"><strong>Midwest</strong> — Chicago, IL<br>120 employees · $67.2M revenue</div>
-            <div class="office-card"><strong>Southeast</strong> — Atlanta, GA<br>75 employees · $48.7M revenue</div>
+            <div class="office-card"><strong>HQ</strong> — New York, NY<br>200 employees · $15M revenue</div>
+            <div class="office-card"><strong>West Coast Hub</strong> — San Francisco, CA<br>150 employees · $12M revenue</div>
+            <div class="office-card"><strong>Southern</strong> — Austin, TX<br>80 employees · $5M revenue</div>
+            <div class="office-card"><strong>Midwest</strong> — Chicago, IL<br>100 employees · $8M revenue</div>
+            <div class="office-card"><strong>+ 16 more worldwide</strong></div>
             """)
 
             gr.Markdown("### How It Works")
