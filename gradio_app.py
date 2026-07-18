@@ -34,6 +34,33 @@ except ImportError:
     print("Warning: rag_agent not available. Running in demo mode.")
 
 
+# ─────────────────────────────────────────────────────────────────────
+# ZeroGPU startup probe
+# ─────────────────────────────────────────────────────────────────────
+# Hugging Face moved FREE Gradio Spaces to ZeroGPU-only (CPU Basic now needs
+# PRO). ZeroGPU refuses to start unless it detects a @spaces.GPU function —
+# otherwise you get "No @spaces.GPU function detected during startup".
+# This app does ALL its work on CPU + the Groq cloud API, so we register a
+# no-op probe purely to satisfy that check. It is never called, so it uses
+# none of the free daily GPU quota.
+# The `spaces` package only exists on HF Spaces; locally (Lab 7 in the
+# codespace) we fall back to a stub so @spaces.GPU is a plain passthrough.
+try:
+    import spaces
+except ImportError:
+    class _SpacesStub:
+        @staticmethod
+        def GPU(func=None, **kwargs):
+            return func if func is not None else (lambda f: f)
+    spaces = _SpacesStub()
+
+
+@spaces.GPU
+def _zerogpu_startup_probe():
+    """No-op — exists only so HF ZeroGPU detects a GPU function at startup."""
+    return None
+
+
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 1.  Custom CSS for professional styling                         ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -104,11 +131,11 @@ with gr.Blocks(
         with gr.Column(scale=1):
             gr.Markdown("### Company Offices")
             gr.HTML("""
-            <div class="office-card"><strong>HQ</strong> — New York, NY<br>200 employees · $15M revenue</div>
-            <div class="office-card"><strong>West Coast Hub</strong> — San Francisco, CA<br>150 employees · $12M revenue</div>
-            <div class="office-card"><strong>Southern</strong> — Austin, TX<br>80 employees · $5M revenue</div>
-            <div class="office-card"><strong>Midwest</strong> — Chicago, IL<br>100 employees · $8M revenue</div>
-            <div class="office-card"><strong>+ 16 more worldwide</strong></div>
+            <div class="office-card"><strong>HQ</strong> — New York, NY<br>150 employees · $85.5M revenue</div>
+            <div class="office-card"><strong>West Coast</strong> — San Francisco, CA<br>95 employees · $78.9M revenue</div>
+            <div class="office-card"><strong>Southern</strong> — Austin, TX<br>80 employees · $52.3M revenue</div>
+            <div class="office-card"><strong>Midwest</strong> — Chicago, IL<br>120 employees · $67.2M revenue</div>
+            <div class="office-card"><strong>Southeast</strong> — Atlanta, GA<br>75 employees · $48.7M revenue</div>
             """)
 
             gr.Markdown("### How It Works")
