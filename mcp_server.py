@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Lab 2: FastMCP Weather Server
+Lab 3: FastMCP Weather Server
 ────────────────────────────────────────────────────────────────────────
 A robust FastMCP server that provides weather and geocoding services via HTTP.
-
+ 
 Tools Provided
 --------------
 1. get_weather(lat, lon) → dict with temperature °C, WMO code, conditions
 2. convert_c_to_f(c) → float (temperature in °F)
 3. geocode_location(name) → dict with latitude, longitude, location name
-
+ 
 Key Features
 ------------
 * **Robust Retry Logic**: All API calls retry up to 3 times with exponential
@@ -19,23 +19,23 @@ Key Features
 * **Graceful Error Handling**: Returns error dict instead of raising exceptions,
   allowing clients to continue processing
 * **HTTP Transport**: Runs on localhost:8000/mcp/ using FastAPI + Uvicorn
-
+ 
 Architecture
 ------------
 This server centralizes all external API calls to Open-Meteo, providing a
 clean separation between agents (orchestration) and API access (this server).
 """
-
+ 
 from __future__ import annotations
-
+ 
 # ── stdlib ──────────────────────────────────────────────────────────
 import time
 from typing import Final
-
+ 
 # ── 3rd-party ───────────────────────────────────────────────────────
 import requests
 from fastmcp import FastMCP
-
+ 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 1.  Weather-code lookup table (WMO standard codes)               ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -57,7 +57,7 @@ WEATHER_CODES: Final[dict[int, str]] = {
     86: "Heavy snow showers",            95: "Thunderstorm",
     96: "Thunderstorm with slight hail", 99: "Thunderstorm with heavy hail",
 }
-
+ 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 2.  Retry configuration for API resilience                       ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -65,18 +65,33 @@ WEATHER_CODES: Final[dict[int, str]] = {
 MAX_RETRIES    = 3       # Total attempts (1 original + 2 retries)
 BACKOFF_FACTOR = 1.5     # Exponential backoff: 1.5s, 2.25s, 3.375s
 TRANSIENT_CODES = {429, 500, 502, 503, 504}  # HTTP codes worth retrying
-
+ 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 3.  MCP Server initialization and tool definitions               ║
 # ╚══════════════════════════════════════════════════════════════════╝
 mcp = FastMCP("WeatherServer")
-
+ 
 # ─── Weather Tool ────────────────────────────────────────────────────
-
+ 
 @mcp.tool
-
+ 
+    """
+    Get the CURRENT weather at a latitude/longitude.
+ 
+    Use after geocode_location has turned a place name into coordinates.
+    Returns {"temperature": °C, "code": WMO weather code, "conditions":
+    plain-English description}. The temperature is CELSIUS — call
+    convert_c_to_f if you need Fahrenheit. On failure returns
+    {"error": "..."} instead of raising, so you can report or retry.
+    """
+    # Implementation note (not shown to the LLM — FastMCP only publishes
+    # the docstring above): up to MAX_RETRIES attempts, a fresh session
+    # each time, retrying on network errors or HTTP 429/5xx with
+    # exponential back-off (1.5 s, 2.25 s, …).
+ 
+ 
     last_error = None
-
+ 
     # Retry loop with fresh connections
     for attempt in range(MAX_RETRIES):
         try:
@@ -84,55 +99,68 @@ mcp = FastMCP("WeatherServer")
             session = requests.Session()
             resp = session.get(url, timeout=15)
             session.close()
-
+ 
             # Handle rate limiting and server errors with retry
             if resp.status_code in TRANSIENT_CODES:
                 last_error = f"HTTP {resp.status_code}"
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(BACKOFF_FACTOR ** attempt)
                     continue
-
+ 
             resp.raise_for_status()
-
-
+ 
+ 
+ 
         except requests.HTTPError as e:
             # HTTP errors (4xx, 5xx not already caught)
             last_error = f"HTTP {e.response.status_code}"
             if attempt < MAX_RETRIES - 1:
                 time.sleep(BACKOFF_FACTOR ** attempt)
                 continue
-
+ 
         except requests.RequestException as e:
             # Network errors (timeout, connection refused, etc.)
             last_error = f"{type(e).__name__}"
             if attempt < MAX_RETRIES - 1:
                 time.sleep(BACKOFF_FACTOR ** attempt)
                 continue
-
+ 
         except (KeyError, ValueError) as e:
             # Data format errors - don't retry, immediate failure
             return {
                 "error": f"Received invalid data from weather service: {type(e).__name__}. Please try again later."
             }
-
+ 
     # All retries exhausted - return graceful error
     return {
         "error": f"Weather service failed after {MAX_RETRIES} attempts (last error: {last_error}). Please try again later."
     }
-
-
+ 
+ 
 # ─── Temperature Conversion Tool ─────────────────────────────────────
-
+ 
 @mcp.tool
-
-
-
+ 
+ 
+ 
 # ─── Geocoding Tool ──────────────────────────────────────────────────
-
+ 
 @mcp.tool
 def geocode_location(name: str) -> dict:
     """
-
+    Convert a place name into geographic coordinates.
+ 
+    Use when you have a city or location name and need lat/lon before
+    calling get_weather. Pass the bare city name ("Austin", not
+    "Austin, TX") — it matches far more reliably.
+    Returns {"latitude": float, "longitude": float, "name": matched
+    location name}, or {"error": "..."} if nothing matched.
+    """
+    # Implementation note (not shown to the LLM): same retry policy as
+    # get_weather — MAX_RETRIES attempts, fresh session each time,
+    # exponential back-off on network errors or HTTP 429/5xx.
+ 
+ 
     # Retry loop with fresh connections
     for attempt in range(MAX_RETRIES):
         try:
@@ -140,16 +168,16 @@ def geocode_location(name: str) -> dict:
             session = requests.Session()
             resp = session.get(url, params={"name": name, "count": 1}, timeout=15)
             session.close()
-
+ 
             # Handle rate limiting and server errors with retry
             if resp.status_code in TRANSIENT_CODES:
                 last_error = f"HTTP {resp.status_code}"
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(BACKOFF_FACTOR ** attempt)
                     continue
-
+ 
             resp.raise_for_status()
-
+ 
             # Parse and return geocoding results
             data = resp.json()
             if data.get("results"):
@@ -164,37 +192,35 @@ def geocode_location(name: str) -> dict:
                 return {
                     "error": f"No location found for '{name}'. Try a different search term."
                 }
-
+ 
         except requests.HTTPError as e:
             # HTTP errors (4xx, 5xx not already caught)
             last_error = f"HTTP {e.response.status_code}"
             if attempt < MAX_RETRIES - 1:
                 time.sleep(BACKOFF_FACTOR ** attempt)
                 continue
-
+ 
         except requests.RequestException as e:
             # Network errors (timeout, connection refused, etc.)
             last_error = f"{type(e).__name__}"
             if attempt < MAX_RETRIES - 1:
                 time.sleep(BACKOFF_FACTOR ** attempt)
                 continue
-
+ 
         except (KeyError, ValueError) as e:
             # Data format errors - don't retry, immediate failure
             return {
                 "error": f"Received invalid data from geocoding service: {type(e).__name__}. Please try again later."
             }
-
+ 
     # All retries exhausted - return graceful error
     return {
         "error": f"Geocoding service failed after {MAX_RETRIES} attempts (last error: {last_error}). Please try again later."
     }
-
+ 
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 4.  Server startup                                                ║
 # ╚══════════════════════════════════════════════════════════════════╝
 if __name__ == "__main__":
     # Start HTTP server using FastAPI + Uvicorn
     # Clients connect to: http://127.0.0.1:8000/mcp/
-
-
