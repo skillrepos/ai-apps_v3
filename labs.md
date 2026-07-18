@@ -1,6 +1,6 @@
 # Developing AI Applications with Agents, RAG, & MCP using Python
 ## Session labs 
-## Revision 4.0 - 07/18/26
+## Revision 4.1 - 07/18/26
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
@@ -286,7 +286,7 @@ code -d labs/common/lab3_server_solution.txt mcp_server.py
 
 As you look at the differences, note that we are using FastMCP to more easily set up a server, with its *@mcp.tool* decorators to designate our functions as MCP tools. Also, we run this using the *streamable-http* transport protocol. Review each difference to see what is being done, then use the arrows to merge. When finished, click the "X" in the tab at the top to close and save the files.
 
-![MCP server code](./images/31ai44.png?raw=true "MCP server code") 
+![MCP server code](./images/v3appb30.png?raw=true "MCP server code") 
 
 <br><br>
 
