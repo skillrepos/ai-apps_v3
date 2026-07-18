@@ -75,26 +75,6 @@ mcp = FastMCP("WeatherServer")
 
 @mcp.tool
 
-    """
-    Fetch **current weather** from Open-Meteo and return a concise dict.
-
-    Retry policy
-    ------------
-    * Up to MAX_RETRIES total attempts with fresh connections.
-    * Retries on network errors **or** HTTP 429/5xx.
-    * Exponential back-off (1.5 s, 2.25 s, …).
-    * Each retry uses a new session to avoid connection pool issues.
-
-    Parameters
-    ----------
-    lat, lon : float
-        Geographic coordinates in decimal degrees.
-
-    Returns
-    -------
-   
-
-
     last_error = None
 
     # Retry loop with fresh connections
@@ -113,7 +93,6 @@ mcp = FastMCP("WeatherServer")
                     continue
 
             resp.raise_for_status()
-
 
 
         except requests.HTTPError as e:
@@ -153,23 +132,6 @@ mcp = FastMCP("WeatherServer")
 @mcp.tool
 def geocode_location(name: str) -> dict:
     """
-    Geocode a location name to latitude/longitude coordinates using Open-Meteo's geocoding API.
-
-    Retry policy
-    ------------
-    * Up to MAX_RETRIES total attempts with fresh connections.
-    * Retries on network errors **or** HTTP 429/5xx.
-    * Exponential back-off (1.5 s, 2.25 s, …).
-    * Each retry uses a new session to avoid connection pool issues.
-
-    Parameters
-    ----------
-    name : str
-        Location name (e.g., "San Francisco", "Paris, France", "London, UK")
-
-    Returns
-    -------
-
 
     # Retry loop with fresh connections
     for attempt in range(MAX_RETRIES):
@@ -234,4 +196,5 @@ def geocode_location(name: str) -> dict:
 if __name__ == "__main__":
     # Start HTTP server using FastAPI + Uvicorn
     # Clients connect to: http://127.0.0.1:8000/mcp/
+
 
