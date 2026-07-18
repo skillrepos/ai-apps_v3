@@ -34,9 +34,22 @@ import os
 # dependency) instead of adding another package.
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
-# Chosen for free-tier headroom: 30K tokens/min and 500K tokens/day.
-# (llama-3.3-70b-versatile is only 100K tokens/day — ~6 queries — too tight.)
-GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+# Groq retires models periodically (see console.groq.com/docs/deprecations).
+# meta-llama/llama-4-scout was shut down 2026-07-17, which is why the old ID
+# now returns 404 model_not_found.
+#
+# We use llama-3.3-70b-versatile: it's a plain instruct model that follows the
+# hand-rolled text TAO protocol (Thought/Action/Args) this agent parses, so it's
+# a true drop-in for scout. NOTE: Groq has this model slated for shutdown on
+# 2026-08-16 — revisit before then.
+#
+# Why not openai/gpt-oss-* (Groq's recommended replacement)? Those are reasoning
+# + native-tool-calling models. Live testing showed they DON'T drop into this
+# agent's text protocol: default effort buries the answer in a separate
+# `reasoning` field (empty .content), and reasoning_effort="low" makes the model
+# emit a native tool call, which 400s here. Moving to gpt-oss would require
+# prompt + wrapper rework and per-lab retesting — see notes for that migration.
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 HF_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 
