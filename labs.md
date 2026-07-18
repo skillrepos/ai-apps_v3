@@ -1,6 +1,6 @@
 # Developing AI Applications with Agents, RAG, & MCP using Python
 ## Session labs 
-## Revision 3.2 - 04/08/26
+## Revision 4.0 - 07/18/26
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
@@ -810,7 +810,7 @@ code -d labs/common/lab7_gradio_solution.txt gradio_app.py
 export GROQ_API_KEY=your-key-value
 ```
 
-(If you'd rather stay on the local Ollama model, you can skip this step — the app works either way, just more slowly. If you have Hugging Face PRO or pre-paid credits, `export HF_TOKEN=...` also still works.)
+(If you'd rather stay on the local Ollama model, you can skip this step — the app works either way, just more slowly.)
 
 4. Now run the gradio app.
 
@@ -1128,7 +1128,7 @@ git push
 
 <br><br>
 
-11. Switch back to your Space on Hugging Face and click on the *App* link at the top. You should see that your app is in the process of building. After a few minutes, the app will be live and you can interact with it just like you did locally — but now it's running on the HuggingFace Spaces platform, and using a larger AI model served through that platform. You should see faster response times as well.
+11. Switch back to your Space on Hugging Face and click on the *App* link at the top. You should see that your app is in the process of building. After a few minutes, the app will be live and you can interact with it just like you did locally — but now it's running on the HuggingFace Spaces platform, and using the Groq cloud model (via the `GROQ_API_KEY` secret you set) instead of the local Ollama one. You should see faster response times as well.
 
 ![app building](./images/v3appb27.png?raw=true "app building")
 
