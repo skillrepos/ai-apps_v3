@@ -1080,7 +1080,7 @@ code -d labs/common/lab8_gradio_solution.txt labs/common/lab7_gradio_solution.tx
 
 (The app's `get_llm()` checks `GROQ_API_KEY` first, so this is all the Space needs to use the cloud model. Don't set `HF_TOKEN` as a Space secret — on a free HF account it only has ~$0.10/month of Inference Provider credits and the app would fail with a 402 after a couple of queries.)
 
-![Secret values](./images/v3app31.png?raw=true "Secret values")
+![Secret values](./images/v3appb31.png?raw=true "Secret values")
 
 <br><br>
 
