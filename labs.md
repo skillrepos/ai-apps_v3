@@ -1,6 +1,6 @@
 # Developing AI Applications with Agents, RAG, & MCP using Python
 ## Session labs 
-## Revision 4.1 - 07/18/26
+## Revision 4.2 - 07/19/26
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
@@ -1080,7 +1080,7 @@ code -d labs/common/lab8_gradio_solution.txt labs/common/lab7_gradio_solution.tx
 
 (The app's `get_llm()` checks `GROQ_API_KEY` first, so this is all the Space needs to use the cloud model. Don't set `HF_TOKEN` as a Space secret — on a free HF account it only has ~$0.10/month of Inference Provider credits and the app would fail with a 402 after a couple of queries.)
 
-![Secret values](./images/v2app33.png?raw=true "Secret values")
+![Secret values](./images/v3app31.png?raw=true "Secret values")
 
 <br><br>
 
