@@ -1,6 +1,6 @@
 # Developing AI Applications with Agents, RAG, & MCP using Python
 ## Session labs 
-## Revision 4.2 - 07/19/26
+## Revision 4.3 - 07/19/26
 
 **Follow the startup instructions in the README.md file IF NOT ALREADY DONE!**
 
@@ -689,7 +689,7 @@ code guardrails.py
 code -d labs/common/lab6_agent_solution.txt rag_agent.py
 ```
 
-![Updating the RAG agent](./images/v2app48.png?raw=true "Updating the RAG agent")
+![Updating the RAG agent](./images/v3appb32.png?raw=true "Updating the RAG agent")
 
 <br><br>
 
