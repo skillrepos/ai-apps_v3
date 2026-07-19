@@ -41,6 +41,33 @@ except ImportError:
     print("Warning: rag_agent not available. Running in demo mode.")
 
 
+# ─────────────────────────────────────────────────────────────────────
+# ZeroGPU startup probe
+# ─────────────────────────────────────────────────────────────────────
+# Hugging Face moved FREE Gradio Spaces to ZeroGPU-only (CPU Basic now needs
+# PRO). ZeroGPU refuses to start unless it detects a @spaces.GPU function —
+# otherwise you get "No @spaces.GPU function detected during startup".
+# This app does ALL its work on CPU + the Groq cloud API, so we register a
+# no-op probe purely to satisfy that check. It is never called, so it uses
+# none of the free daily GPU quota.
+# The `spaces` package only exists on HF Spaces; locally (Lab 7 in the
+# codespace) we fall back to a stub so @spaces.GPU is a plain passthrough.
+try:
+    import spaces
+except ImportError:
+    class _SpacesStub:
+        @staticmethod
+        def GPU(func=None, **kwargs):
+            return func if func is not None else (lambda f: f)
+    spaces = _SpacesStub()
+
+
+@spaces.GPU
+def _zerogpu_startup_probe():
+    """No-op — exists only so HF ZeroGPU detects a GPU function at startup."""
+    return None
+
+
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║ 1.  Custom CSS for professional styling                         ║
 # ╚══════════════════════════════════════════════════════════════════╝
