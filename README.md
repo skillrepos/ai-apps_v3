@@ -32,24 +32,28 @@ The codespace is ready to use when you see a prompt like the one shown below in 
 Starting in **Lab 7**, the agent runs against a cloud model instead of the local Ollama one. We use **Groq** for this. Create your free Groq key now (while your codespace finishes building) and save it — you'll set it in your terminal during Lab 7. Follow the directions below.
  
 A. Go to [https://console.groq.com](https://console.groq.com) and sign up or log in. No credit card is required for the free tier.
+
+![groq console](./images/v3appb33.png?raw=true "groq console")
  
-<br>
+<br><br>
+
 B. Navigate to [https://console.groq.com/keys](https://console.groq.com/keys) and click *Create API Key*.
+
+![groq api keys](./images/v3appb34.png?raw=true "groq api keys")
  
-<br>
+<br><br>
+
 C. Give it a name, create it, and copy the key value. Save it somewhere — you won't be able to view it again.
+
+![groq api keys](./images/v3appb35.png?raw=true "groq api keys")
+
+![groq api keys](./images/v3appb36.png?raw=true "groq api keys")
  
-<br>
-D. That's all you need to do during setup — **don't export the key yet.** Labs 1–6 run on the local Ollama model, so no key is needed for them. In **Lab 7**, when the labs switch to the cloud model, you'll run this in the codespace terminal:
+<br><br>
+
+D. That's all you need to do during setup — **don't export the key yet.** Labs 1–6 run on the local Ollama model, so no key is needed for them. In **Lab 7**, when the labs switch to the cloud model, you'll set it in the codespace then.
  
-```bash
-export GROQ_API_KEY="your_groq_key_here"
-```
- 
-<br>
-*Note: the key is optional even in Lab 7 — if you skip it, `get_llm()` falls back to the local Ollama model, just more slowly.*
- 
-<br>
+<br><br>
 
 **5. Set up your HuggingFace account and token (for deploying in Lab 9).**
 
